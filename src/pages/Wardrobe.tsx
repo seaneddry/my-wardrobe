@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FilterSheet } from '../components/FilterSheet';
-import { Header } from '../components/Header';
 import { Icon } from '../components/Icon';
 import { ItemCard } from '../components/ItemCard';
+import { NavBar } from '../components/NavBar';
 import { DEFAULT_FILTERS, applyFilters, loadFilters, saveFilters, sheetFilterCount, type Filters } from '../lib/filters';
 import { useData } from '../state/data';
 
@@ -39,7 +39,7 @@ export function Wardrobe() {
   const sheetCount = sheetFilterCount(filters);
   const narrowed = filters.q || filters.category || sheetCount > 0;
 
-  // Only show category chips that are in use, in the order of the category list.
+  // Only show categories that are in use, in the order of the category list.
   const usedCategories = useMemo(() => {
     const used = new Set(items.map((i) => i.category));
     return lookups('category').map((l) => l.value).filter((c) => used.has(c));
@@ -47,62 +47,76 @@ export function Wardrobe() {
 
   return (
     <div className="screen">
-      <Header
+      <NavBar
+        large
         title="Wardrobe"
         subtitle={loading && items.length === 0 ? 'Loading…' : `${inWardrobe} ${inWardrobe === 1 ? 'piece' : 'pieces'}`}
+        right={
+          <button
+            type="button"
+            className="nav-icon-button"
+            onClick={() => setSheetOpen(true)}
+            aria-label={sheetCount ? `Filter and sort, ${sheetCount} active` : 'Filter and sort'}
+          >
+            <Icon name="filter" size={24} weight={2} />
+            {sheetCount > 0 && <span className="badge-dot">{sheetCount}</span>}
+          </button>
+        }
       >
-        <div className="search-row">
-          <label className="search">
-            <Icon name="search" size={18} />
+        <div className="search-bar">
+          <label className="search-field">
+            <Icon name="search" size={18} weight={2} />
             <input
               type="search"
-              placeholder="Search your wardrobe"
+              enterKeyHint="search"
+              placeholder="Search"
               aria-label="Search your wardrobe"
               value={filters.q}
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             />
+            {filters.q && (
+              <button type="button" className="search-clear" aria-label="Clear search" onClick={() => setFilters({ ...filters, q: '' })}>
+                <Icon name="close" size={12} weight={3} />
+              </button>
+            )}
           </label>
-          <button
-            type="button"
-            className={`filter-button${sheetCount ? ' filter-button-on' : ''}`}
-            onClick={() => setSheetOpen(true)}
-            aria-label={sheetCount ? `Filter and sort, ${sheetCount} active` : 'Filter and sort'}
-          >
-            <Icon name="filter" size={20} />
-            {sheetCount > 0 && <span className="filter-count">{sheetCount}</span>}
-          </button>
         </div>
-      </Header>
-
-      {usedCategories.length > 1 && (
-        <div className="category-scroll" role="group" aria-label="Category">
-          {[null, ...usedCategories].map((c) => (
-            <button
-              key={c ?? 'all'}
-              type="button"
-              className={`category${filters.category === c ? ' category-on' : ''}`}
-              aria-pressed={filters.category === c}
-              onClick={() => setFilters({ ...filters, category: c })}
-            >
-              {c ?? 'All'}
-            </button>
-          ))}
-        </div>
-      )}
+        {usedCategories.length > 1 && (
+          <div className="pill-row" role="group" aria-label="Category">
+            {[null, ...usedCategories].map((c) => (
+              <button
+                key={c ?? 'all'}
+                type="button"
+                className={`pill${filters.category === c ? ' pill-on' : ''}`}
+                aria-pressed={filters.category === c}
+                onClick={() => setFilters({ ...filters, category: c })}
+              >
+                {c ?? 'All'}
+              </button>
+            ))}
+          </div>
+        )}
+      </NavBar>
 
       <main className="page">
         {!loading && items.length === 0 ? (
           <div className="empty">
-            <h2>Start with one piece</h2>
-            <p>Take a photo of something you wear often, add its details, and build from there.</p>
-            <Link to="/add" className="button button-primary">
-              Add a piece
+            <div className="empty-icon">
+              <Icon name="hanger" size={30} weight={1.6} />
+            </div>
+            <h2>Your wardrobe is empty</h2>
+            <p>Add something you wear often. Snap a photo, pick one from your library, or find it online.</p>
+            <Link to="/add" viewTransition className="button button-primary">
+              Add your first piece
             </Link>
           </div>
         ) : visible.length === 0 && narrowed ? (
           <div className="empty">
-            <h2>Nothing matches</h2>
-            <p>Try a different search, or clear the filters to see everything.</p>
+            <div className="empty-icon">
+              <Icon name="search" size={28} weight={1.8} />
+            </div>
+            <h2>No matches</h2>
+            <p>Try a different search, or clear the filters.</p>
             <button type="button" className="button button-secondary" onClick={() => setFilters(DEFAULT_FILTERS)}>
               Clear search and filters
             </button>
@@ -116,13 +130,7 @@ export function Wardrobe() {
         )}
       </main>
 
-      <FilterSheet
-        open={sheetOpen}
-        filters={filters}
-        onChange={setFilters}
-        onClose={() => setSheetOpen(false)}
-        resultCount={visible.length}
-      />
+      <FilterSheet open={sheetOpen} filters={filters} onChange={setFilters} onClose={() => setSheetOpen(false)} resultCount={visible.length} />
     </div>
   );
 }

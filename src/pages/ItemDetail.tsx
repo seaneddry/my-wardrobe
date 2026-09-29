@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Carousel } from '../components/Carousel';
 import { formatAttribute } from '../components/CustomField';
-import { Header } from '../components/Header';
+import { Group } from '../components/Group';
 import { Icon } from '../components/Icon';
-import { Photo } from '../components/Photo';
+import { NavBar } from '../components/NavBar';
 import { Swatch } from '../components/Swatch';
+import { useToast } from '../components/Toast';
 import { itemTitle } from '../data/types';
 import { errorMessage, formatDate, formatPrice } from '../lib/format';
 import { useData } from '../state/data';
@@ -12,24 +14,29 @@ import { useData } from '../state/data';
 export function ItemDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
   const { items, fields, colourHex, setItemStatus, deleteItem, loading } = useData();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const item = items.find((i) => i.id === id);
 
+  // Opened directly (no history in this app): go to the wardrobe instead.
+  const goBack = () => (location.key === 'default' ? navigate('/', { viewTransition: true }) : navigate(-1));
   const back = (
-    <button type="button" className="header-button" onClick={() => navigate(-1)}>
-      <Icon name="back" size={20} /> Back
+    <button type="button" className="nav-icon-button" onClick={goBack} aria-label="Back">
+      <Icon name="back" size={22} weight={2.4} />
     </button>
   );
 
   if (!item) {
     return (
       <div className="screen">
-        <Header title={loading ? 'Loading…' : 'Piece not found'} left={back} />
+        <NavBar title={loading ? '' : 'Not found'} left={back} />
         {!loading && (
-          <div className="page">
-            <p>This piece may have been deleted.</p>
+          <div className="empty">
+            <h2>Piece not found</h2>
+            <p>It may have been deleted.</p>
             <Link to="/" className="button button-secondary">
               Back to wardrobe
             </Link>
@@ -42,11 +49,12 @@ export function ItemDetail() {
   const current = item;
   const title = itemTitle(current);
 
-  async function run(action: () => Promise<unknown>) {
+  async function run(action: () => Promise<unknown>, done?: string) {
     setBusy(true);
     setError(null);
     try {
       await action();
+      if (done) toast(done);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -55,87 +63,124 @@ export function ItemDetail() {
   }
 
   function remove() {
-    if (!window.confirm(`Delete “${title}”? This removes the piece and its photo for good.`)) return;
+    if (!window.confirm(`Delete “${title}”? This removes the piece and all its photos for good.`)) return;
     run(async () => {
       await deleteItem(current);
-      navigate('/', { replace: true });
-    });
+      navigate('/', { replace: true, viewTransition: true });
+    }, 'Piece deleted');
   }
 
-  const colours = [current.colour, current.secondary_colour].filter((c): c is string => Boolean(c));
-  const rows: Array<[string, React.ReactNode]> = [
-    ['Category', current.category],
-    ['Type', current.item_type],
+  const facts = [
+    ['Size', current.size],
     [
       'Colour',
-      colours.length ? (
-        <span className="inline-list">
-          {colours.map((c) => (
-            <span key={c} className="with-swatch">
-              <Swatch hex={colourHex(c)} /> {c}
-            </span>
-          ))}
-        </span>
+      current.colour ? (
+        <>
+          <Swatch hex={colourHex(current.colour)} size={12} />
+          {current.colour}
+        </>
       ) : null,
     ],
-    ['Size', current.size],
-    ['Brand', current.brand],
+    ['Condition', current.condition],
+  ].filter(([, v]) => v) as Array<[string, React.ReactNode]>;
+
+  const rows: Array<[string, string]> = [
+    ['Category', current.category],
+    ['Type', current.item_type ?? ''],
+    ['Second colour', current.secondary_colour ?? ''],
     ['Season', current.seasons.join(', ')],
     ['Occasion', current.occasions.join(', ')],
     ['Bought', formatDate(current.purchase_date)],
     ['Price', formatPrice(current.price)],
-    ['Condition', current.condition],
     ...fields.map((f) => [f.label, formatAttribute(f, current.attributes[f.key])] as [string, string]),
   ];
+  const shownRows = rows.filter(([, v]) => v);
 
   return (
     <div className="screen">
-      <Header
+      <NavBar
+        overlay
         title={title}
         left={back}
         right={
-          <Link to={`/item/${current.id}/edit`} className="header-button">
-            <Icon name="edit" size={20} /> Edit
+          <Link to={`/item/${current.id}/edit`} className="nav-button nav-button-strong">
+            Edit
           </Link>
         }
       />
-      <div className="detail-photo">
-        <Photo path={current.photo_path} alt={title} fit="contain" eager />
+      <Carousel photos={current.photos} alt={title} heroName="item-hero" />
+
+      <div className="detail-head">
+        {current.brand && <p className="detail-brand">{current.brand}</p>}
+        <h1 className="detail-title">{title}</h1>
+        <p className="detail-sub">
+          {current.item_type && current.item_type !== title ? `${current.category}, ${current.item_type}` : current.category}
+        </p>
       </div>
-      <main className="page stack">
-        {current.status === 'archived' && <p className="notice">Archived. It's hidden from your wardrobe but kept on record.</p>}
-        <dl className="details">
-          {rows
-            .filter(([, v]) => v !== null && v !== undefined && v !== '')
-            .map(([k, v]) => (
-              <div key={k} className="detail-row">
-                <dt>{k}</dt>
-                <dd>{v}</dd>
+
+      <main className="page detail-body stack" style={{ paddingTop: 16 }}>
+        {current.status === 'archived' && <p className="notice">Archived. It’s hidden from your wardrobe but kept on record.</p>}
+
+        {facts.length > 0 && (
+          <div className="facts" style={{ gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))` }}>
+            {facts.map(([k, v]) => (
+              <div key={k} className="fact">
+                <span className="fact-label">{k}</span>
+                <span className="fact-value">{v}</span>
               </div>
             ))}
-        </dl>
-        {current.notes && (
-          <section>
-            <h2 className="section-title">Notes</h2>
-            <p className="notes">{current.notes}</p>
-          </section>
+          </div>
         )}
-        {error && <p className="notice notice-error" role="alert">{error}</p>}
-        <div className="action-row">
+
+        {shownRows.length > 0 && (
+          <Group header="Details">
+            {shownRows.map(([k, v]) => (
+              <div key={k} className="row">
+                <span className="row-label">{k}</span>
+                <span className="row-value">{v}</span>
+              </div>
+            ))}
+          </Group>
+        )}
+
+        {current.notes && (
+          <Group header="Notes" pad>
+            <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{current.notes}</p>
+          </Group>
+        )}
+
+        {error && (
+          <p className="notice notice-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <Group>
           <button
             type="button"
-            className="button button-secondary"
+            className="row"
             disabled={busy}
-            onClick={() => run(() => setItemStatus(current, current.status === 'archived' ? 'active' : 'archived'))}
+            onClick={() =>
+              run(
+                () => setItemStatus(current, current.status === 'archived' ? 'active' : 'archived'),
+                current.status === 'archived' ? 'Back in your wardrobe' : 'Moved to archive',
+              )
+            }
           >
-            <Icon name="archive" size={20} />
-            {current.status === 'archived' ? 'Move back to wardrobe' : 'Archive'}
+            <span className="row-icon">
+              <Icon name={current.status === 'archived' ? 'restore' : 'archive'} size={18} />
+            </span>
+            <span className="row-label">{current.status === 'archived' ? 'Move back to wardrobe' : 'Archive'}</span>
           </button>
-          <button type="button" className="button button-danger" disabled={busy} onClick={remove}>
-            <Icon name="trash" size={20} /> Delete
+          <button type="button" className="row row-danger" disabled={busy} onClick={remove}>
+            <span className="row-icon" style={{ color: 'var(--danger)' }}>
+              <Icon name="trash" size={18} />
+            </span>
+            <span className="row-label">Delete piece</span>
           </button>
-        </div>
-        <p className="meta">Added {new Date(current.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+        </Group>
+
+        <p className="footnote">Added {new Date(current.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</p>
       </main>
     </div>
   );

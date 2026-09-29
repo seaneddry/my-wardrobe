@@ -1,11 +1,15 @@
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { createHashRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router-dom';
 import { TabBar } from './components/TabBar';
+import { ToastProvider } from './components/Toast';
 import { config } from './config';
 import { ConfigMissing } from './pages/ConfigMissing';
 import { ItemDetail } from './pages/ItemDetail';
 import { ItemForm } from './pages/ItemForm';
 import { Login } from './pages/Login';
+import { FieldsEditor } from './pages/manage/FieldsEditor';
+import { ListEditor } from './pages/manage/ListEditor';
+import { ManageIntro, ManageLayout } from './pages/manage/ManageLayout';
 import { Settings } from './pages/Settings';
 import { Wardrobe } from './pages/Wardrobe';
 import { AuthProvider, useAuth } from './state/auth';
@@ -28,7 +32,7 @@ function Shell() {
   const location = useLocation();
   const isForm = location.pathname === '/add' || location.pathname.endsWith('/edit');
 
-  // Each screen starts at the top, except when returning to the wardrobe list.
+  // Each screen starts at the top, except the wardrobe, which restores its own position.
   useEffect(() => {
     if (location.pathname !== '/') window.scrollTo(0, 0);
   }, [location.pathname]);
@@ -36,18 +40,35 @@ function Shell() {
   return (
     <>
       <ErrorBanner />
-      <Routes>
-        <Route path="/" element={<Wardrobe />} />
-        <Route path="/add" element={<ItemForm />} />
-        <Route path="/item/:id" element={<ItemDetail />} />
-        <Route path="/item/:id/edit" element={<ItemForm />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Outlet />
       {!isForm && <TabBar />}
     </>
   );
 }
+
+// A data router enables animated page transitions (View Transitions API).
+const router = createHashRouter([
+  {
+    element: <Shell />,
+    children: [
+      { path: '/', element: <Wardrobe /> },
+      { path: '/add', element: <ItemForm /> },
+      { path: '/item/:id', element: <ItemDetail /> },
+      { path: '/item/:id/edit', element: <ItemForm /> },
+      { path: '/settings', element: <Settings /> },
+      {
+        path: '/manage',
+        element: <ManageLayout />,
+        children: [
+          { index: true, element: <ManageIntro /> },
+          { path: 'lists/:list', element: <ListEditor /> },
+          { path: 'fields', element: <FieldsEditor /> },
+        ],
+      },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+]);
 
 function Gate() {
   const { ready, session } = useAuth();
@@ -55,9 +76,7 @@ function Gate() {
   if (!session) return <Login />;
   return (
     <DataProvider userId={session.user.id}>
-      <HashRouter>
-        <Shell />
-      </HashRouter>
+      <RouterProvider router={router} />
     </DataProvider>
   );
 }
@@ -65,8 +84,10 @@ function Gate() {
 export function App() {
   if (!config.isConfigured) return <ConfigMissing />;
   return (
-    <AuthProvider>
-      <Gate />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>
+    </ToastProvider>
   );
 }

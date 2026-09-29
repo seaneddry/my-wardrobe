@@ -9,11 +9,5 @@ export const config = {
   bucket: 'wardrobe',
   appVersion: __APP_VERSION__,
   /** Highest database migration this version of the app needs. Bump when adding a migration. */
-  requiredSchema: '001',
+  requiredSchema: '003',
 };
-
-/** Link to this project's Supabase dashboard, derived from the project URL. */
-export function dashboardUrl(): string | null {
-  const match = config.supabaseUrl.match(/^https:\/\/([a-z0-9]+)\.supabase\.co/i);
-  return match ? `https://supabase.com/dashboard/project/${match[1]}` : null;
-}

@@ -25,6 +25,16 @@ export type AttributeValue = string | number | boolean | string[] | null;
 
 export type ItemStatus = 'active' | 'archived';
 
+export type PhotoSource = 'camera' | 'library' | 'web';
+
+/** A photo saved in storage. The first photo of a piece is its cover. */
+export interface StoredPhoto {
+  path: string;
+  thumb: string;
+  source?: PhotoSource;
+  source_url?: string | null;
+}
+
 export interface Item {
   id: string;
   name: string | null;
@@ -40,8 +50,10 @@ export interface Item {
   price: number | null;
   condition: string | null;
   notes: string | null;
+  /** Cover photo (first of `photos`), kept for the grid and older backups. */
   photo_path: string | null;
   thumb_path: string | null;
+  photos: StoredPhoto[];
   attributes: Record<string, AttributeValue>;
   status: ItemStatus;
   created_at: string;
@@ -49,7 +61,7 @@ export interface Item {
 }
 
 /** The editable part of an item (everything except ids, photos and timestamps). */
-export type ItemFields = Omit<Item, 'id' | 'photo_path' | 'thumb_path' | 'created_at' | 'updated_at'>;
+export type ItemFields = Omit<Item, 'id' | 'photo_path' | 'thumb_path' | 'photos' | 'created_at' | 'updated_at'>;
 
 export function emptyItemFields(): ItemFields {
   return {

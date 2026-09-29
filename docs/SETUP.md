@@ -22,6 +22,7 @@ Everything happens in the browser, except one small free app (GitHub Desktop) us
 1. In the left sidebar, open **SQL Editor** and select **New query**.
 2. Open `supabase/migrations/001_initial_schema.sql` from the project folder in any text editor, copy everything, and paste it into the query window.
 3. Select **Run**. You should see *Success. No rows returned*.
+4. Select **New query** again and do the same with `002_manage_functions.sql`, then `003_multiple_photos.sql`. Every file in `supabase/migrations/` must be run once, in number order.
 4. Check it worked:
    - **Table Editor** lists `items`, `lookups`, `field_definitions` and `schema_migrations`.
    - **Storage** shows a bucket named `wardrobe`.
@@ -112,10 +113,17 @@ Keep these in a note for Part B:
 
 ---
 
+## Optional — online photo search
+
+To find product photos online instead of taking your own, follow **Part D** of `docs/UPGRADING.md`. It needs a free SerpApi key (no card) and one small Supabase function, about 15 minutes.
+
+---
+
 ## Tips for photos
 
 - Use a plain wall, bed sheet or floor as the background, in daylight.
 - Hang the piece or lay it flat, and shoot in portrait orientation. The wardrobe grid is portrait-shaped.
+- Add several angles: front, back, a close-up of the fabric or label. Swipe through them on the piece's page. The first photo is the cover.
 - Photos are shrunk on your phone before upload (about 200–400 KB each), so the free 1 GB of storage holds a few thousand pieces.
 
 ---

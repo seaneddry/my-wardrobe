@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { config } from '../config';
 import { DEFAULT_LOOKUPS } from '../data/defaults';
-import type { SaveItemInput, WardrobeRepository } from '../data/repository';
+import type { NewField, SaveItemInput, WardrobeRepository } from '../data/repository';
 import { createSupabaseRepository } from '../data/supabaseRepository';
 import { LOOKUP_LISTS, type FieldDefinition, type Item, type Lookup, type LookupList } from '../data/types';
 import { errorMessage } from '../lib/format';
@@ -14,9 +14,26 @@ interface CachedData {
   fields: FieldDefinition[];
 }
 
+/** Actions used by the Manage section. Each one refreshes the data afterwards. */
+export interface ManageActions {
+  addLookup(list: LookupList, value: string, meta?: Lookup['meta']): Promise<void>;
+  renameLookup(list: LookupList, oldValue: string, newValue: string): Promise<void>;
+  updateLookupMeta(id: string, meta: Lookup['meta']): Promise<void>;
+  deleteLookup(id: string): Promise<void>;
+  reorderLookups(list: LookupList, orderedIds: string[]): Promise<void>;
+  addField(input: Omit<NewField, 'sort_order'>): Promise<void>;
+  updateField(id: string, patch: Partial<Pick<FieldDefinition, 'label' | 'options' | 'active'>>): Promise<void>;
+  deleteField(id: string): Promise<void>;
+  reorderFields(orderedIds: string[]): Promise<void>;
+}
+
 interface DataState {
   items: Item[];
+  /** Custom fields shown on the item form (hidden ones excluded). */
   fields: FieldDefinition[];
+  /** Every custom field, including hidden ones. */
+  allFields: FieldDefinition[];
+  manage: ManageActions;
   loading: boolean;
   error: string | null;
   schemaVersion: string | null;
@@ -96,14 +113,66 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     [userId, allLookups, fields],
   );
 
+  const manage: ManageActions = {
+    async addLookup(list, value, meta = {}) {
+      const current = allLookups.filter((l) => l.list === list);
+      const next = current.reduce((max, l) => Math.max(max, l.sort_order), -1) + 1;
+      await repo.addLookup(list, value, next, meta);
+      await refresh();
+    },
+    async renameLookup(list, oldValue, newValue) {
+      await repo.renameLookup(list, oldValue, newValue);
+      await refresh();
+    },
+    async updateLookupMeta(id, meta) {
+      await repo.updateLookupMeta(id, meta);
+      await refresh();
+    },
+    async deleteLookup(id) {
+      await repo.deleteLookup(id);
+      await refresh();
+    },
+    async reorderLookups(list, orderedIds) {
+      // Show the new order immediately, then confirm with the server.
+      setAllLookups((prev) =>
+        prev.map((l) => (l.list === list && orderedIds.includes(l.id) ? { ...l, sort_order: orderedIds.indexOf(l.id) } : l)),
+      );
+      await repo.reorderLookups(list, orderedIds);
+      await refresh();
+    },
+    async addField(input) {
+      const next = fields.reduce((max, f) => Math.max(max, f.sort_order), -1) + 1;
+      await repo.addField({ ...input, sort_order: next });
+      await refresh();
+    },
+    async updateField(id, patch) {
+      await repo.updateField(id, patch);
+      await refresh();
+    },
+    async deleteField(id) {
+      await repo.deleteField(id);
+      await refresh();
+    },
+    async reorderFields(orderedIds) {
+      setFields((prev) => prev.map((f) => (orderedIds.includes(f.id) ? { ...f, sort_order: orderedIds.indexOf(f.id) } : f)));
+      await repo.reorderFields(orderedIds);
+      await refresh();
+    },
+  };
+
+  const sortedFields = [...fields].sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label));
+  const sortedLookups = [...allLookups].sort((a, b) => a.sort_order - b.sort_order || a.value.localeCompare(b.value));
+
   const value: DataState = {
     items,
-    fields,
+    fields: sortedFields.filter((f) => f.active),
+    allFields: sortedFields,
+    manage,
     loading,
     error,
     schemaVersion,
     schemaBehind: schemaVersion !== null && schemaVersion < config.requiredSchema,
-    lookups: (list) => allLookups.filter((l) => l.list === list),
+    lookups: (list) => sortedLookups.filter((l) => l.list === list),
     colourHex: (v) => (v ? (allLookups.find((l) => l.list === 'colour' && l.value === v)?.meta.hex ?? null) : null),
     refresh,
     async saveItem(input) {

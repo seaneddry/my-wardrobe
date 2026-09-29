@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'My Wardrobe',
         short_name: 'Wardrobe',
         description: 'Catalogue your clothes and decide what to wear.',
-        theme_color: '#1E2B4A',
-        background_color: '#1E2B4A',
+        theme_color: '#f2f2f7',
+        background_color: '#f2f2f7',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
@@ -34,7 +34,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,svg}'],
         runtimeCaching: [
           {
             // Photos from Supabase Storage (signed URLs). Cached on the device so

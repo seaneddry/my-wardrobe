@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Header } from '../components/Header';
+import { Group } from '../components/Group';
 import { errorMessage } from '../lib/format';
 import { useAuth } from '../state/auth';
 
@@ -23,22 +23,30 @@ export function Login() {
   }
 
   return (
-    <div className="screen">
-      <Header title="My Wardrobe" subtitle="Sign in with the account you created in Supabase." />
-      <form className="page stack" onSubmit={submit}>
-        <label className="field" htmlFor="email">
-          <span className="field-label">Email</span>
-          <input id="email" className="input" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+    <form className="login" onSubmit={submit}>
+      <div className="login-brand">
+        <img src={`${import.meta.env.BASE_URL}apple-touch-icon.png`} alt="" />
+        <h1>My Wardrobe</h1>
+        <p>Sign in with the account you created in Supabase.</p>
+      </div>
+      <Group>
+        <label className="row-input" htmlFor="email">
+          <span className="row-label">Email</span>
+          <input id="email" type="email" autoComplete="username" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
-        <label className="field" htmlFor="password">
-          <span className="field-label">Password</span>
-          <input id="password" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        <label className="row-input" htmlFor="password">
+          <span className="row-label">Password</span>
+          <input id="password" type="password" autoComplete="current-password" placeholder="Required" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
-        {error && <p className="notice notice-error" role="alert">{error}</p>}
-        <button className="button button-primary button-block" type="submit" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-    </div>
+      </Group>
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button className="button button-primary button-block" type="submit" disabled={busy || !email || !password}>
+        {busy ? 'Signing in…' : 'Sign in'}
+      </button>
+    </form>
   );
 }

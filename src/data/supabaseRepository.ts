@@ -2,12 +2,16 @@ import { newId } from '../lib/id';
 import { supabase } from '../lib/supabase';
 import { removePhotos, uploadItemPhoto } from './photos';
 import type { SaveItemInput, WardrobeRepository } from './repository';
-import type { FieldDefinition, Item, Lookup } from './types';
+import type { FieldDefinition, Item, Lookup, StoredPhoto } from './types';
 
 function normaliseItem(row: Record<string, unknown>): Item {
   const item = row as unknown as Item;
+  let photos: StoredPhoto[] = Array.isArray(item.photos) ? item.photos.filter((p) => p?.path) : [];
+  // Pieces saved before migration 003 only have the single cover photo.
+  if (photos.length === 0 && item.photo_path) photos = [{ path: item.photo_path, thumb: item.thumb_path ?? item.photo_path }];
   return {
     ...item,
+    photos,
     seasons: item.seasons ?? [],
     occasions: item.occasions ?? [],
     attributes: item.attributes ?? {},
@@ -15,7 +19,11 @@ function normaliseItem(row: Record<string, unknown>): Item {
   };
 }
 
-function fail(action: string, error: { message: string }): never {
+function fail(action: string, error: { message: string; code?: string }): never {
+  if (error.code === '23505') throw new Error(`${action}: that name is already in use.`);
+  if (error.code === 'PGRST202' || error.code === 'PGRST204' || /could not find the (function|'photos' column)/i.test(error.message)) {
+    throw new Error(`${action}: the database needs updating. Run the latest migration (see docs/UPGRADING.md).`);
+  }
   throw new Error(`${action}: ${error.message}`);
 }
 
@@ -27,33 +35,49 @@ export function createSupabaseRepository(userId: string): WardrobeRepository {
       return (data ?? []).map(normaliseItem);
     },
 
-    async saveItem({ existing, fields, photo, removePhoto }: SaveItemInput) {
+    async saveItem({ existing, fields, photos }: SaveItemInput) {
       const id = existing?.id ?? newId();
-      let paths = { photo_path: existing?.photo_path ?? null, thumb_path: existing?.thumb_path ?? null };
-      const oldPaths = [existing?.photo_path, existing?.thumb_path];
-      let replacedPhoto = false;
 
-      if (photo) {
-        paths = await uploadItemPhoto(userId, id, photo);
-        replacedPhoto = true;
-      } else if (removePhoto) {
-        paths = { photo_path: null, thumb_path: null };
-        replacedPhoto = true;
+      // Upload new photos (a few at a time), keeping the chosen order.
+      const uploaded: StoredPhoto[] = [];
+      const final: StoredPhoto[] = [];
+      try {
+        for (const draft of photos) {
+          if (draft.kind === 'stored') {
+            final.push(draft.photo);
+          } else {
+            const { photo_path, thumb_path } = await uploadItemPhoto(userId, id, draft.blob);
+            const stored: StoredPhoto = { path: photo_path, thumb: thumb_path, source: draft.source, source_url: draft.source_url ?? null };
+            uploaded.push(stored);
+            final.push(stored);
+          }
+        }
+      } catch (err) {
+        await removePhotos(uploaded.flatMap((p) => [p.path, p.thumb]));
+        throw err;
       }
 
-      const record = { ...fields, ...paths };
+      const record = {
+        ...fields,
+        photos: final,
+        photo_path: final[0]?.path ?? null,
+        thumb_path: final[0]?.thumb ?? null,
+      };
       const query = existing
         ? supabase.from('items').update(record).eq('id', id).select().single()
         : supabase.from('items').insert({ ...record, id }).select().single();
       const { data, error } = await query;
 
       if (error) {
-        if (photo) await removePhotos([paths.photo_path, paths.thumb_path]);
+        await removePhotos(uploaded.flatMap((p) => [p.path, p.thumb]));
         fail("Couldn't save this piece", error);
       }
-      if (replacedPhoto && existing) {
-        // Best effort: an orphaned old photo is harmless if this fails.
-        removePhotos(oldPaths).catch(() => undefined);
+
+      // Delete stored photos that were removed in the form (best effort).
+      if (existing) {
+        const kept = new Set(final.map((p) => p.path));
+        const removed = normaliseItem(existing as unknown as Record<string, unknown>).photos.filter((p) => !kept.has(p.path));
+        if (removed.length) removePhotos(removed.flatMap((p) => [p.path, p.thumb])).catch(() => undefined);
       }
       return normaliseItem(data);
     },
@@ -61,7 +85,8 @@ export function createSupabaseRepository(userId: string): WardrobeRepository {
     async deleteItem(item) {
       const { error } = await supabase.from('items').delete().eq('id', item.id);
       if (error) fail("Couldn't delete this piece", error);
-      removePhotos([item.photo_path, item.thumb_path]).catch(() => undefined);
+      const paths = [item.photo_path, item.thumb_path, ...item.photos.flatMap((p) => [p.path, p.thumb])];
+      removePhotos([...new Set(paths)]).catch(() => undefined);
     },
 
     async setItemStatus(item, status) {
@@ -87,11 +112,55 @@ export function createSupabaseRepository(userId: string): WardrobeRepository {
       if (error) fail("Couldn't create the starter lists", error);
     },
 
+    async addLookup(list, value, sortOrder, meta = {}) {
+      const { error } = await supabase.from('lookups').insert({ list, value: value.trim(), sort_order: sortOrder, meta });
+      if (error) fail(`Couldn't add "${value.trim()}"`, error);
+    },
+
+    async renameLookup(list, oldValue, newValue) {
+      const { error } = await supabase.rpc('rename_lookup', { p_list: list, p_old: oldValue, p_new: newValue });
+      if (error) fail(`Couldn't rename "${oldValue}"`, error);
+    },
+
+    async updateLookupMeta(id, meta) {
+      const { error } = await supabase.from('lookups').update({ meta }).eq('id', id);
+      if (error) fail("Couldn't save the colour", error);
+    },
+
+    async deleteLookup(id) {
+      const { error } = await supabase.from('lookups').delete().eq('id', id);
+      if (error) fail("Couldn't remove it", error);
+    },
+
+    async reorderLookups(list, orderedIds) {
+      const { error } = await supabase.rpc('reorder_lookups', { p_list: list, p_ids: orderedIds });
+      if (error) fail("Couldn't save the new order", error);
+    },
+
+    async addField(input) {
+      const { error } = await supabase.from('field_definitions').insert(input);
+      if (error) fail(`Couldn't add "${input.label}"`, error);
+    },
+
+    async updateField(id, patch) {
+      const { error } = await supabase.from('field_definitions').update(patch).eq('id', id);
+      if (error) fail("Couldn't save the field", error);
+    },
+
+    async deleteField(id) {
+      const { error } = await supabase.rpc('delete_field', { p_id: id });
+      if (error) fail("Couldn't delete the field", error);
+    },
+
+    async reorderFields(orderedIds) {
+      const { error } = await supabase.rpc('reorder_fields', { p_ids: orderedIds });
+      if (error) fail("Couldn't save the new order", error);
+    },
+
     async listFieldDefinitions() {
       const { data, error } = await supabase
         .from('field_definitions')
         .select('id, key, label, field_type, options, sort_order, active')
-        .eq('active', true)
         .order('sort_order')
         .order('label');
       if (error) fail("Couldn't load your custom fields", error);

@@ -24,73 +24,18 @@ Use `MAJOR.MINOR.PATCH`:
 
 ---
 
-## Everyday changes without code
+## Everyday changes: lists and custom fields
 
-Until the web CMS arrives (v1.1), use the Supabase **SQL Editor** for these. Replace `you@example.com` with your login email. SQL is used here because the tables need your user id, and these snippets look it up for you.
+Use **Settings → Manage lists and fields** in the app. It works best on a computer, and fine on a phone.
 
-### Add a value to a list
-
-Lists are `category`, `colour`, `size`, `season`, `occasion` and `condition`.
-
-```sql
-insert into public.lookups (user_id, list, value, sort_order)
-select id, 'category', 'Swimwear', 20 from auth.users where email = 'you@example.com';
-
--- Colours can carry a swatch colour:
-insert into public.lookups (user_id, list, value, sort_order, meta)
-select id, 'colour', 'Teal', 20, '{"hex": "#2A7F7F"}' from auth.users where email = 'you@example.com';
-```
-
-### Rename a list value
-
-Pieces store the value as text, so rename it in both places:
-
-```sql
-update public.lookups set value = 'Jackets' where list = 'category' and value = 'Outerwear';
-update public.items   set category = 'Jackets' where category = 'Outerwear';
-```
-
-For colours, update `colour` and `secondary_colour` on items. For seasons and occasions (which are lists), use:
-
-```sql
-update public.items set seasons = array_replace(seasons, 'Autumn', 'Fall');
-```
-
-### Remove a list value
-
-```sql
-delete from public.lookups where list = 'size' and value = 'XXL';
-```
-
-Pieces that already use the value keep it. It just stops being offered as an option.
-
-### Change the order of a list
-
-Lower `sort_order` comes first:
-
-```sql
-update public.lookups set sort_order = 0 where list = 'category' and value = 'Shirts';
-```
-
-### Add a custom field to the item form
-
-```sql
-insert into public.field_definitions (user_id, key, label, field_type, options, sort_order)
-select id, 'fabric', 'Fabric', 'select', array['Cotton', 'Linen', 'Wool', 'Denim', 'Silk'], 1
-from auth.users where email = 'you@example.com';
-```
-
-- `key`: lowercase letters, numbers and underscores. Never change it once used, because values are stored under it.
-- `field_type`: `text`, `number`, `date`, `select` (pick one), `multiselect` (pick several) or `boolean` (yes/no).
-- `options`: only needed for `select` and `multiselect`.
-
-To hide a field without losing its data:
-
-```sql
-update public.field_definitions set active = false where key = 'fabric';
-```
-
-Close and reopen the app to see list and field changes.
+- **Lists** (categories, colours, sizes, seasons, occasions, conditions): add, rename, reorder with the arrows, or remove. Colours also have a swatch colour.
+  - **Renaming** updates every piece that uses the value, in one step.
+  - **Removing** only takes the value off the list. Pieces that already use it keep it.
+  - You can't remove the last category, since every piece needs one.
+- **Custom fields**: add a field, choose its type (text, number, date, pick one, pick several, yes or no), edit its name and options, reorder, hide or delete.
+  - **Hide** takes it off the item form but keeps the values on your pieces. Show it again at any time.
+  - **Delete** removes the field and its values from every piece. It can't be undone.
+  - A field's type can't be changed after it's created, so saved values stay valid. To change type, create a new field.
 
 ---
 
@@ -98,12 +43,13 @@ Close and reopen the app to see list and field changes.
 
 When a feature needs a new table or column:
 
-1. Add a new file in `supabase/migrations/`, numbered in order: `002_wear_log.sql`, `003_…`. **Never edit a migration that has already been run**; fix it with a new one instead.
+1. Add a new file in `supabase/migrations/`, numbered in order: `003_outfits.sql`, `004_…`. **Never edit a migration that has already been run**; fix it with a new one instead.
 2. Write it so it can safely run twice (`create table if not exists`, `add column if not exists`, `drop policy if exists` before `create policy`).
 3. Enable row-level security and add an "own rows" policy on any new table. Copy the pattern from `001`.
-4. End the file with: `insert into public.schema_migrations (version) values ('002') on conflict do nothing;`
+4. End the file with: `insert into public.schema_migrations (version) values ('003') on conflict do nothing;`
 5. In `src/config.ts`, set `requiredSchema` to the new number.
 6. **Run the migration in the SQL Editor first, then push the app.** If the app goes out first, Settings shows a warning that the database is behind.
+7. Add a section to `docs/UPGRADING.md` describing the upgrade.
 
 ---
 
@@ -117,16 +63,25 @@ src/
     repository.ts           The interface every read/write goes through
     supabaseRepository.ts   The Supabase implementation of that interface
     photos.ts               Photo compression, upload and cached viewing links
+    webImages.ts            Calls the image-search Edge Function
     defaults.ts             Starter lists added on first sign-in
   state/                    Login state and the shared data store
   pages/                    One file per screen
-  components/               Reusable pieces (header, chips, photo, filter sheet)
+    manage/                 The Manage section (lists and custom fields)
+  components/               Reusable pieces (nav bar, tab bar, sheets, carousel, photo strip, online search)
   lib/                      Small helpers (filters, formatting, image resizing)
 supabase/migrations/        Database scripts, run in order
-docs/                       Setup, maintenance, backlog
+supabase/functions/         Edge Functions, deployed from the Supabase dashboard
+docs/                       Setup, upgrading, maintenance, backlog
 ```
 
 The screens never call Supabase directly. They go through `repository.ts`. To change where data lives, such as adding offline sync later, write a new implementation of that interface and switch to it in `state/data.tsx`. The screens don't need to change.
+
+---
+
+## Updating the Edge Function
+
+If a new version changes `supabase/functions/image-search/index.ts`, open https://supabase.com/dashboard/project/_/functions, click **image-search**, open the **Code** tab, replace the code with the new file's contents, and click **Deploy**. Its secret and settings stay as they are.
 
 ---
 
@@ -137,6 +92,7 @@ The screens never call Supabase directly. They go through `repository.ts`. To ch
 | 500 MB database | Item details are tiny. Tens of thousands of pieces fit. |
 | 1 GB photo storage | Roughly 3,000+ pieces at typical phone-photo sizes after compression. |
 | 5 GB bandwidth a month | Photos are cached on your phone, so normal daily use stays well under this. |
+| SerpApi: 250 searches a month | Only the **Search** button uses one. Check usage at https://serpapi.com/dashboard. When it runs out, search stops until the next month; nothing is charged. |
 | Pauses after 7 days idle | Using the app counts as activity. If it pauses, restore it from the Supabase dashboard; nothing is lost. |
 
 Check usage any time under **Supabase → Project Settings → Usage**.

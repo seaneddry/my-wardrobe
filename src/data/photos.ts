@@ -9,13 +9,13 @@ const THUMB_EDGE = 480;
 const URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const RENEW_BEFORE_MS = 1000 * 60 * 60 * 24;
 
-export async function uploadItemPhoto(userId: string, itemId: string, file: File) {
+export async function uploadItemPhoto(userId: string, itemId: string, file: Blob) {
   const [full, thumb] = await Promise.all([
     compressImage(file, FULL_EDGE, 0.82),
     compressImage(file, THUMB_EDGE, 0.78),
   ]);
-  // A timestamp in the name means a replaced photo gets a new URL, so no stale caches.
-  const base = `${userId}/${itemId}-${Date.now()}`;
+  // A unique name means a replaced photo gets a new URL, so no stale caches.
+  const base = `${userId}/${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const photo_path = `${base}.jpg`;
   const thumb_path = `${base}-thumb.jpg`;
   const bucket = supabase.storage.from(config.bucket);
