@@ -15,17 +15,17 @@ Move finished items into `CHANGELOG.md`.
 - [x] Several photos per piece with a carousel
 - [x] Find photos online with approval before saving
 
-## Next: v1.3 — Outfit builder
+## Done in v1.3
 
-- [ ] Canvas with slots (outerwear, top, bottom, shoes, accessory); pick a piece per slot from a filtered strip
-- [ ] Shuffle: random pick per slot, respecting current filters (season, occasion) and letting you lock slots
-- [ ] Save outfits with a name and tags; list and open saved outfits
-- [ ] Database: `outfits` and `outfit_items` tables (migration 004)
+- [x] Outfit builder canvas with swipe rows, Shuffle and locks
+- [x] Saved outfits with collages, favourites, occasion and mood
+- [x] AI stylist (Gemini) suggesting outfits by occasion, mood, weather and notes
 
-## v1.4 — Wear log and stats
+## Next: v1.4 — Wear log and stats
 
 - [ ] "Wore this today" on a piece and on a saved outfit
 - [ ] Stats: most worn, least worn, not worn in 90+ days, cost per wear
+- [ ] Stylist avoids pieces worn in the last few days
 - [ ] Database: `wear_log` table (migration 005)
 
 ## CMS extras (unscheduled)
@@ -34,6 +34,12 @@ Move finished items into `CHANGELOG.md`.
 - [ ] Bulk photo upload: drop many photos, create one draft piece per photo
 - [ ] CSV import and export alongside the existing JSON export
 - [ ] Rename an option of a custom field and update pieces that use it
+
+## Stylist ideas (unscheduled)
+
+- [ ] Send piece photos to the stylist (vision) for better colour and texture matching
+- [ ] "Build around this piece" from a piece's page
+- [ ] Weekly plan: suggest outfits for each day of the week
 
 ## Photo ideas (unscheduled)
 

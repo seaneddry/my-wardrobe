@@ -29,17 +29,25 @@ const PATHS = {
   left: 'M15 6l-6 6 6 6',
   right: 'M9 6l6 6-6 6',
   star: 'M12 4l2.4 5 5.6.7-4.1 3.8 1.1 5.5L12 16.3 7 19l1.1-5.5L4 9.7 9.6 9 12 4Z',
+  shuffle: 'M16 4h4v4M4 20 20 4M20 16v4h-4M14.5 14.5 20 20M4 4l5 5',
+  lock: 'M6 11h12v9H6v-9Zm2.5 0V7.5a3.5 3.5 0 0 1 7 0V11',
+  unlock: 'M6 11h12v9H6v-9Zm2.5 0V7.5a3.5 3.5 0 0 1 6.8-1.2',
+  sparkles:
+    'M11 3l1.7 4.6L17.3 9.3l-4.6 1.7L11 15.6 9.3 11 4.7 9.3l4.6-1.7L11 3ZM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z',
+  layers: 'M12 3 3 8l9 5 9-5-9-5ZM3 12.5l9 5 9-5M3 17l9 5 9-5',
+  heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z',
+  bookmark: 'M6 4h12v17l-6-4.5L6 21V4Z',
 } as const;
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name, size = 22, weight = 1.8 }: { name: IconName; size?: number; weight?: number }) {
+export function Icon({ name, size = 22, weight = 1.8, filled = false }: { name: IconName; size?: number; weight?: number; filled?: boolean }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth={weight}
       strokeLinecap="round"

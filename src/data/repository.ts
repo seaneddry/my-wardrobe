@@ -1,4 +1,4 @@
-import type { FieldDefinition, FieldType, Item, ItemFields, Lookup, LookupList, PhotoSource, StoredPhoto } from './types';
+import type { FieldDefinition, FieldType, Item, ItemFields, Lookup, LookupList, Outfit, OutfitFields, PhotoSource, StoredPhoto } from './types';
 
 /**
  * Every read and write the app makes goes through this interface.
@@ -28,6 +28,11 @@ export interface WardrobeRepository {
   /** Deletes the field and removes its values from every piece (all-or-nothing). */
   deleteField(id: string): Promise<void>;
   reorderFields(orderedIds: string[]): Promise<void>;
+
+  /** Saved outfits. Returns an empty list if the outfits table doesn't exist yet. */
+  listOutfits(): Promise<Outfit[]>;
+  saveOutfit(fields: OutfitFields, id?: string): Promise<Outfit>;
+  deleteOutfit(id: string): Promise<void>;
 
   schemaVersion(): Promise<string | null>;
 }

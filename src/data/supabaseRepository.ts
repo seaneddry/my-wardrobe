@@ -2,7 +2,7 @@ import { newId } from '../lib/id';
 import { supabase } from '../lib/supabase';
 import { removePhotos, uploadItemPhoto } from './photos';
 import type { SaveItemInput, WardrobeRepository } from './repository';
-import type { FieldDefinition, Item, Lookup, StoredPhoto } from './types';
+import type { FieldDefinition, Item, Lookup, Outfit, StoredPhoto } from './types';
 
 function normaliseItem(row: Record<string, unknown>): Item {
   const item = row as unknown as Item;
@@ -165,6 +165,35 @@ export function createSupabaseRepository(userId: string): WardrobeRepository {
         .order('label');
       if (error) fail("Couldn't load your custom fields", error);
       return ((data ?? []) as FieldDefinition[]).map((f) => ({ ...f, options: f.options ?? [] }));
+    },
+
+    async listOutfits() {
+      const { data, error } = await supabase.from('outfits').select('*').order('created_at', { ascending: false });
+      if (error) {
+        // Table not created yet (migration 004 not run): treat as no outfits.
+        if (error.code === 'PGRST205' || error.code === '42P01' || /could not find the table/i.test(error.message)) return [];
+        fail("Couldn't load your outfits", error);
+      }
+      return ((data ?? []) as Outfit[]).map((o) => ({ ...o, pieces: Array.isArray(o.pieces) ? o.pieces : [] }));
+    },
+
+    async saveOutfit(fields, id) {
+      const query = id
+        ? supabase.from('outfits').update(fields).eq('id', id).select().single()
+        : supabase.from('outfits').insert(fields).select().single();
+      const { data, error } = await query;
+      if (error) {
+        if (error.code === 'PGRST205' || error.code === '42P01') {
+          throw new Error("Couldn't save the outfit: the database needs updating. Run migration 004 (see docs/UPGRADING.md).");
+        }
+        fail("Couldn't save the outfit", error);
+      }
+      return data as Outfit;
+    },
+
+    async deleteOutfit(id) {
+      const { error } = await supabase.from('outfits').delete().eq('id', id);
+      if (error) fail("Couldn't delete the outfit", error);
     },
 
     async schemaVersion() {

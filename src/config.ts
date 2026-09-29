@@ -9,5 +9,5 @@ export const config = {
   bucket: 'wardrobe',
   appVersion: __APP_VERSION__,
   /** Highest database migration this version of the app needs. Bump when adding a migration. */
-  requiredSchema: '003',
+  requiredSchema: '004',
 };

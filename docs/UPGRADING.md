@@ -7,6 +7,76 @@ Use this whenever you receive a new version of the code. Two rules:
 
 ---
 
+## 1.2.0 → 1.3.0 (outfit builder, saved outfits, AI stylist)
+
+This version adds `supabase/migrations/004_outfits.sql` and a second server function, `stylist`. Parts A–C take about 10 minutes. Part D (the AI stylist) takes about 10 minutes and is optional: the builder, Shuffle and saved outfits work without it.
+
+To open a file from the zip: unzip it, find the file, right-click → **Open With → TextEdit** (Mac) or **Open with → Notepad** (Windows), then **Cmd/Ctrl + A** and **Cmd/Ctrl + C**.
+
+### Part A — Update the database (1 minute)
+
+1. Go to https://supabase.com/dashboard/project/_/sql/new
+2. Paste the contents of `supabase/migrations/004_outfits.sql` and click **Run**. You should see *Success. No rows returned*.
+
+This creates the outfits table, adds a starter list of moods, and makes renaming an occasion or mood also update your saved outfits.
+
+### Part B — Update the code
+
+1. Unzip the new `my-wardrobe.zip`.
+2. In GitHub Desktop, click **Repository → Show in Finder / Show in Explorer**, and turn on hidden files (**Cmd + Shift + .** or **View → Show → Hidden items**).
+3. Double-click into the new unzipped folder (the one containing `package.json`, `src`, `docs`), press **Cmd/Ctrl + A**, then **Cmd/Ctrl + C**.
+4. Go into your project folder (the one with the faded `.git` folder), press **Cmd/Ctrl + V**, tick **Apply to All** and choose **Replace**.
+5. In GitHub Desktop, type `v1.3.0` in **Summary**, click **Commit to main**, then **Push origin**.
+
+### Part C — Check it
+
+1. Wait for the green tick at https://github.com/YOUR-USERNAME/my-wardrobe/actions
+2. Hard-refresh the app (**Cmd+Shift+R** / **Ctrl+Shift+R**); on iPhone, swipe it away and reopen twice. **Settings → About** should show **1.3.0** and database **004**. The tab bar now has **Outfits** and **Stylist**.
+3. Go to **Settings → Lists and custom fields → Categories**. Each category shows its place in outfits (Top, Bottom, Dress or one-piece, Outerwear, Shoes, Accessory, or Not used in outfits). The app guesses from the name; tap the pencil on any category to correct it. Getting these right is what makes the builder and stylist work well.
+
+### Part D — Set up the AI stylist
+
+The stylist uses **Google Gemini**. The free API key needs no credit card. Only short text descriptions of your pieces (category, type, name, brand, colours, seasons, occasions) are sent, never your photos. On Gemini's free tier, Google may use requests to improve its products.
+
+**D1. Get a free Gemini API key**
+
+1. Go to https://aistudio.google.com/apikey and sign in with a Google account.
+2. Accept the terms if asked.
+3. Click **Create API key**. If it asks for a project, choose **Create API key in new project** (or pick any existing one).
+4. Copy the key. Don't add billing; the free tier is enough for personal use.
+
+**D2. Add the key to Supabase**
+
+1. Go to https://supabase.com/dashboard/project/_/functions/secrets
+2. Under **Add new secret**: **Name** `GEMINI_API_KEY`, **Value** your key.
+3. Click **Save**.
+
+**D3. Create the stylist function**
+
+1. Go to https://supabase.com/dashboard/project/_/functions
+2. Click **Deploy a new function**, then **Via Editor**.
+3. Name it exactly `stylist`.
+4. Clear the sample code, then paste the contents of `supabase/functions/stylist/index.ts` from the zip.
+5. Click **Deploy function**.
+6. Open the function's **Details** tab, switch **Verify JWT** off, and click **Save changes** (same as for `image-search`).
+
+**D4. Try it**
+
+1. Open the **Stylist** tab.
+2. Pick an occasion, a mood and the weather (all optional), and add a note if you like.
+3. Tap **Suggest outfits**. After a few seconds you get 3 outfits made only from your pieces, each with why it works and a styling tip.
+4. **Save** keeps one as-is; **Open in builder** lets you swap pieces first.
+
+| If you see | What to do |
+|---|---|
+| "The AI stylist isn't set up yet" | Check the function is named exactly `stylist` (D3) and the secret exactly `GEMINI_API_KEY` (D2). |
+| "The Gemini API key isn't valid" | Copy the key again from https://aistudio.google.com/apikey and update the secret. |
+| "The free AI limit has been reached" | Gemini's free tier has per-minute and per-day limits. Wait a minute, or try again tomorrow. |
+| "Model … isn't available" | Google renamed its models. Add a secret named `GEMINI_MODEL` with a current Flash model name from https://ai.google.dev/gemini-api/docs/models (for example the newest `gemini-…-flash`). |
+| Odd suggestions | Check each category's place in outfits (Part C step 3), and tag pieces with occasions and seasons. |
+
+---
+
 ## 1.1.0 → 1.2.0 (new design, several photos per piece, online photo search)
 
 This version adds `supabase/migrations/003_multiple_photos.sql` and a small server function for online search. Do the parts in order. Parts A–C take about 10 minutes; Part D (online search) about 15 minutes and is optional, since the rest of the app works without it.

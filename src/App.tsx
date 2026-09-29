@@ -10,7 +10,11 @@ import { Login } from './pages/Login';
 import { FieldsEditor } from './pages/manage/FieldsEditor';
 import { ListEditor } from './pages/manage/ListEditor';
 import { ManageIntro, ManageLayout } from './pages/manage/ManageLayout';
+import { OutfitBuilder } from './pages/outfits/OutfitBuilder';
+import { OutfitDetail } from './pages/outfits/OutfitDetail';
+import { Outfits } from './pages/outfits/Outfits';
 import { Settings } from './pages/Settings';
+import { Stylist } from './pages/Stylist';
 import { Wardrobe } from './pages/Wardrobe';
 import { AuthProvider, useAuth } from './state/auth';
 import { DataProvider, useData } from './state/data';
@@ -30,7 +34,7 @@ function ErrorBanner() {
 
 function Shell() {
   const location = useLocation();
-  const isForm = location.pathname === '/add' || location.pathname.endsWith('/edit');
+  const isForm = location.pathname === '/add' || location.pathname === '/outfits/new' || location.pathname.endsWith('/edit');
 
   // Each screen starts at the top, except the wardrobe, which restores its own position.
   useEffect(() => {
@@ -55,6 +59,11 @@ const router = createHashRouter([
       { path: '/add', element: <ItemForm /> },
       { path: '/item/:id', element: <ItemDetail /> },
       { path: '/item/:id/edit', element: <ItemForm /> },
+      { path: '/outfits', element: <Outfits /> },
+      { path: '/outfits/new', element: <OutfitBuilder /> },
+      { path: '/outfits/:id', element: <OutfitDetail /> },
+      { path: '/outfits/:id/edit', element: <OutfitBuilder /> },
+      { path: '/stylist', element: <Stylist /> },
       { path: '/settings', element: <Settings /> },
       {
         path: '/manage',

@@ -22,7 +22,7 @@ Everything happens in the browser, except one small free app (GitHub Desktop) us
 1. In the left sidebar, open **SQL Editor** and select **New query**.
 2. Open `supabase/migrations/001_initial_schema.sql` from the project folder in any text editor, copy everything, and paste it into the query window.
 3. Select **Run**. You should see *Success. No rows returned*.
-4. Select **New query** again and do the same with `002_manage_functions.sql`, then `003_multiple_photos.sql`. Every file in `supabase/migrations/` must be run once, in number order.
+4. Select **New query** again and do the same with `002_manage_functions.sql`, then `003_multiple_photos.sql`, then `004_outfits.sql`. Every file in `supabase/migrations/` must be run once, in number order.
 4. Check it worked:
    - **Table Editor** lists `items`, `lookups`, `field_definitions` and `schema_migrations`.
    - **Storage** shows a bucket named `wardrobe`.
@@ -113,9 +113,10 @@ Keep these in a note for Part B:
 
 ---
 
-## Optional — online photo search
+## Optional — online photo search and AI stylist
 
-To find product photos online instead of taking your own, follow **Part D** of `docs/UPGRADING.md`. It needs a free SerpApi key (no card) and one small Supabase function, about 15 minutes.
+- **Online photo search:** follow "Set up online photo search" (Part D of 1.1.0 → 1.2.0) in `docs/UPGRADING.md`. Needs a free SerpApi key (no card).
+- **AI stylist:** follow "Set up the AI stylist" (Part D of 1.2.0 → 1.3.0) in `docs/UPGRADING.md`. Needs a free Gemini key (no card).
 
 ---
 

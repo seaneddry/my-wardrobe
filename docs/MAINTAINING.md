@@ -63,13 +63,16 @@ src/
     repository.ts           The interface every read/write goes through
     supabaseRepository.ts   The Supabase implementation of that interface
     photos.ts               Photo compression, upload and cached viewing links
-    webImages.ts            Calls the image-search Edge Function
+    functions.ts            Calls this project's Edge Functions as the signed-in user
+    webImages.ts            Online photo search (image-search function)
+    stylist.ts              AI stylist (stylist function); checks answers against real pieces
     defaults.ts             Starter lists added on first sign-in
   state/                    Login state and the shared data store
   pages/                    One file per screen
     manage/                 The Manage section (lists and custom fields)
+    outfits/                Outfits list, outfit page, and the builder canvas
   components/               Reusable pieces (nav bar, tab bar, sheets, carousel, photo strip, online search)
-  lib/                      Small helpers (filters, formatting, image resizing)
+  lib/                      Small helpers (filters, outfits and shuffle, formatting, image resizing)
 supabase/migrations/        Database scripts, run in order
 supabase/functions/         Edge Functions, deployed from the Supabase dashboard
 docs/                       Setup, upgrading, maintenance, backlog
@@ -79,9 +82,9 @@ The screens never call Supabase directly. They go through `repository.ts`. To ch
 
 ---
 
-## Updating the Edge Function
+## Updating an Edge Function
 
-If a new version changes `supabase/functions/image-search/index.ts`, open https://supabase.com/dashboard/project/_/functions, click **image-search**, open the **Code** tab, replace the code with the new file's contents, and click **Deploy**. Its secret and settings stay as they are.
+There are two: `image-search` and `stylist`. If a new version changes `supabase/functions/<name>/index.ts`, open https://supabase.com/dashboard/project/_/functions, click the function, open the **Code** tab, replace the code with the new file's contents, and click **Deploy**. Its secrets and settings stay as they are.
 
 ---
 
@@ -93,6 +96,7 @@ If a new version changes `supabase/functions/image-search/index.ts`, open https:
 | 1 GB photo storage | Roughly 3,000+ pieces at typical phone-photo sizes after compression. |
 | 5 GB bandwidth a month | Photos are cached on your phone, so normal daily use stays well under this. |
 | SerpApi: 250 searches a month | Only the **Search** button uses one. Check usage at https://serpapi.com/dashboard. When it runs out, search stops until the next month; nothing is charged. |
+| Gemini free tier | Per-minute and per-day request limits; one tap on **Suggest** is one request. Plenty for personal use. |
 | Pauses after 7 days idle | Using the app counts as activity. If it pauses, restore it from the Supabase dashboard; nothing is lost. |
 
 Check usage any time under **Supabase → Project Settings → Usage**.

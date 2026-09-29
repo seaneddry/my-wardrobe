@@ -2,6 +2,22 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.3.0 — 2026-09-29
+
+Outfits and an AI stylist.
+
+- New **Outfits** tab: saved looks shown as photo collages, with favourites and occasion filters
+- **Outfit builder** canvas: one swipeable row per slot (outerwear, top or dress, bottom, shoes, accessory); the centred pieces form the outfit
+- **Shuffle** with per-row locks and an occasion filter; rows glide into place one after another
+- Dresses and one-pieces fill both top and bottom
+- Save an outfit with a name, occasion, mood and notes; edit, favourite or delete it later
+- New **Stylist** tab: choose occasion, mood and weather, add notes, and get 3 outfits built only from your pieces, each with why it works and a tip; save one or open it in the builder
+- The app checks every AI suggestion against your real pieces and slot rules before showing it
+- Each category now has a place in outfits, editable in Manage; new **Moods** list
+- Renaming an occasion or mood also updates saved outfits
+- Five-tab bar: Wardrobe, Outfits, Add, Stylist, Settings
+- Database migration 004 and Edge Function `stylist` (see `docs/UPGRADING.md`)
+
 ## 1.2.0 — 2026-09-29
 
 New design, several photos per piece, and online photo search.

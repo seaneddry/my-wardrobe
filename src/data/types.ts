@@ -1,4 +1,4 @@
-export const LOOKUP_LISTS = ['category', 'colour', 'size', 'season', 'occasion', 'condition'] as const;
+export const LOOKUP_LISTS = ['category', 'colour', 'size', 'season', 'occasion', 'condition', 'mood'] as const;
 export type LookupList = (typeof LOOKUP_LISTS)[number];
 
 export interface Lookup {
@@ -6,8 +6,32 @@ export interface Lookup {
   list: LookupList;
   value: string;
   sort_order: number;
-  meta: { hex?: string } & Record<string, unknown>;
+  meta: { hex?: string; slot?: SlotKey } & Record<string, unknown>;
 }
+
+/** Where a category's pieces go in an outfit. "full" covers top and bottom (dresses, jumpsuits). */
+export type SlotKey = 'outer' | 'top' | 'bottom' | 'full' | 'shoes' | 'accessory' | 'none';
+
+export interface OutfitPiece {
+  slot: SlotKey;
+  item_id: string;
+}
+
+export interface Outfit {
+  id: string;
+  name: string;
+  pieces: OutfitPiece[];
+  occasion: string | null;
+  mood: string | null;
+  notes: string | null;
+  source: 'manual' | 'shuffle' | 'ai';
+  ai_reason: string | null;
+  favourite: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type OutfitFields = Omit<Outfit, 'id' | 'created_at' | 'updated_at'>;
 
 export type FieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'boolean';
 

@@ -31,4 +31,5 @@ export const DEFAULT_LOOKUPS: Record<LookupList, Array<string | { value: string;
   season: ['Spring', 'Summer', 'Autumn', 'Winter', 'All year'],
   occasion: ['Casual', 'Work', 'Smart casual', 'Formal', 'Sport', 'Travel', 'Home'],
   condition: ['New', 'Excellent', 'Good', 'Fair', 'Worn out'],
+  mood: ['Relaxed', 'Confident', 'Polished', 'Cozy', 'Bold', 'Minimal', 'Playful', 'Low-key'],
 };

@@ -1,5 +1,6 @@
-import { config } from '../config';
-import { supabase } from '../lib/supabase';
+import { callFunction, NotSetUpError } from './functions';
+
+export { NotSetUpError };
 
 export interface WebImage {
   thumbnail: string;
@@ -11,34 +12,10 @@ export interface WebImage {
   height?: number;
 }
 
-export class NotSetUpError extends Error {
-  constructor() {
-    super('Online photo search isn’t set up yet. Follow “Set up online photo search” in docs/UPGRADING.md.');
-  }
-}
+const notSetUp = () => new NotSetUpError('Online photo search', 'Set up online photo search');
 
-/** Calls the "image-search" Edge Function as the signed-in user. */
 async function call(body: Record<string, unknown>): Promise<Response> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error('Please sign in again.');
-  let res: Response;
-  try {
-    res = await fetch(`${config.supabaseUrl}/functions/v1/image-search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: config.supabaseKey },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error('Couldn’t reach the search service. Check your connection.');
-  }
-  if (res.status === 404) throw new NotSetUpError();
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    if (err.error === 'not_configured') throw new NotSetUpError();
-    throw new Error(err.error ?? err.msg ?? err.message ?? `Search failed (${res.status}).`);
-  }
-  return res;
+  return callFunction('image-search', body, notSetUp());
 }
 
 export async function searchWebImages(query: string): Promise<WebImage[]> {

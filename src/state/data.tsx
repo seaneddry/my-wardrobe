@@ -3,13 +3,14 @@ import { config } from '../config';
 import { DEFAULT_LOOKUPS } from '../data/defaults';
 import type { NewField, SaveItemInput, WardrobeRepository } from '../data/repository';
 import { createSupabaseRepository } from '../data/supabaseRepository';
-import { LOOKUP_LISTS, type FieldDefinition, type Item, type Lookup, type LookupList } from '../data/types';
+import { LOOKUP_LISTS, type FieldDefinition, type Item, type Lookup, type LookupList, type Outfit, type OutfitFields } from '../data/types';
 import { errorMessage } from '../lib/format';
 import { CACHE_KEYS, readJSON, writeJSON } from '../lib/storage';
 
 interface CachedData {
   userId: string;
   items: Item[];
+  outfits?: Outfit[];
   lookups: Lookup[];
   fields: FieldDefinition[];
 }
@@ -33,6 +34,9 @@ interface DataState {
   fields: FieldDefinition[];
   /** Every custom field, including hidden ones. */
   allFields: FieldDefinition[];
+  outfits: Outfit[];
+  saveOutfit(fields: OutfitFields, id?: string): Promise<Outfit>;
+  deleteOutfit(id: string): Promise<void>;
   manage: ManageActions;
   loading: boolean;
   error: string | null;
@@ -59,6 +63,7 @@ export function DataProvider({ userId, children }: { userId: string; children: R
   }, [userId]);
 
   const [items, setItems] = useState<Item[]>(cached?.items ?? []);
+  const [outfits, setOutfits] = useState<Outfit[]>(cached?.outfits ?? []);
   const [allLookups, setAllLookups] = useState<Lookup[]>(cached?.lookups ?? []);
   const [fields, setFields] = useState<FieldDefinition[]>(cached?.fields ?? []);
   const [loading, setLoading] = useState(!cached);
@@ -67,11 +72,12 @@ export function DataProvider({ userId, children }: { userId: string; children: R
 
   const refresh = useCallback(async () => {
     try {
-      let [nextItems, nextLookups, nextFields, version] = await Promise.all([
+      let [nextItems, nextLookups, nextFields, version, nextOutfits] = await Promise.all([
         repo.listItems(),
         repo.listLookups(),
         repo.listFieldDefinitions(),
         repo.schemaVersion(),
+        repo.listOutfits(),
       ]);
       if (nextLookups.length === 0) {
         const rows = LOOKUP_LISTS.flatMap((list) =>
@@ -85,11 +91,12 @@ export function DataProvider({ userId, children }: { userId: string; children: R
         nextLookups = await repo.listLookups();
       }
       setItems(nextItems);
+      setOutfits(nextOutfits);
       setAllLookups(nextLookups);
       setFields(nextFields);
       setSchemaVersion(version);
       setError(null);
-      writeJSON(CACHE_KEYS.data, { userId, items: nextItems, lookups: nextLookups, fields: nextFields } satisfies CachedData);
+      writeJSON(CACHE_KEYS.data, { userId, items: nextItems, outfits: nextOutfits, lookups: nextLookups, fields: nextFields } satisfies CachedData);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -106,11 +113,12 @@ export function DataProvider({ userId, children }: { userId: string; children: R
   }, [refresh]);
 
   const persist = useCallback(
-    (nextItems: Item[]) => {
+    (nextItems: Item[], nextOutfits: Outfit[] = outfits) => {
       setItems(nextItems);
-      writeJSON(CACHE_KEYS.data, { userId, items: nextItems, lookups: allLookups, fields } satisfies CachedData);
+      setOutfits(nextOutfits);
+      writeJSON(CACHE_KEYS.data, { userId, items: nextItems, outfits: nextOutfits, lookups: allLookups, fields } satisfies CachedData);
     },
-    [userId, allLookups, fields],
+    [userId, allLookups, fields, outfits],
   );
 
   const manage: ManageActions = {
@@ -167,6 +175,17 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     items,
     fields: sortedFields.filter((f) => f.active),
     allFields: sortedFields,
+    outfits,
+    async saveOutfit(fields, id) {
+      const saved = await repo.saveOutfit(fields, id);
+      const exists = outfits.some((o) => o.id === saved.id);
+      persist(items, exists ? outfits.map((o) => (o.id === saved.id ? saved : o)) : [saved, ...outfits]);
+      return saved;
+    },
+    async deleteOutfit(id) {
+      await repo.deleteOutfit(id);
+      persist(items, outfits.filter((o) => o.id !== id));
+    },
     manage,
     loading,
     error,

@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Swatch } from '../../components/Swatch';
-import { LOOKUP_LISTS, type Lookup, type LookupList } from '../../data/types';
+import { LOOKUP_LISTS, type Lookup, type LookupList, type SlotKey } from '../../data/types';
+import { guessSlot, SLOT_LABELS } from '../../lib/outfits';
 import { errorMessage } from '../../lib/format';
 import { LIST_INFO, lookupUsage, move, piecesLabel } from '../../lib/manage';
 import { useData } from '../../state/data';
@@ -19,10 +20,18 @@ export function ListEditor() {
 }
 
 function ListEditorBody({ list }: { list: LookupList }) {
-  const { lookups, items, manage } = useData();
+  const { lookups, items, outfits, manage } = useData();
   const info = LIST_INFO[list];
   const rows = lookups(list);
   const isColour = list === 'colour';
+  const isCategory = list === 'category';
+  const usage = (value: string) =>
+    list === 'mood' ? outfits.filter((o) => o.mood === value).length : lookupUsage(items, list, value);
+  const usageLabel = (value: string) => {
+    const n = usage(value);
+    if (list !== 'mood') return piecesLabel(n);
+    return n === 0 ? 'Not used yet' : `Used in ${n} ${n === 1 ? 'outfit' : 'outfits'}`;
+  };
 
   const [newValue, setNewValue] = useState('');
   const [newHex, setNewHex] = useState(DEFAULT_HEX);
@@ -30,6 +39,7 @@ function ListEditorBody({ list }: { list: LookupList }) {
   const [editValue, setEditValue] = useState('');
   const [editHex, setEditHex] = useState(DEFAULT_HEX);
   const [editMulti, setEditMulti] = useState(false);
+  const [editSlot, setEditSlot] = useState<SlotKey>('none');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -70,6 +80,7 @@ function ListEditorBody({ list }: { list: LookupList }) {
     setEditValue(row.value);
     setEditMulti(row.meta.hex === 'multi');
     setEditHex(isHex(row.meta.hex) ? row.meta.hex : DEFAULT_HEX);
+    setEditSlot(row.meta.slot ?? guessSlot(row.value));
     setError(null);
     setNotice(null);
   }
@@ -90,10 +101,13 @@ function ListEditorBody({ list }: { list: LookupList }) {
     const renamed = value !== row.value;
     const hex = editMulti ? 'multi' : editHex;
     const recoloured = isColour && hex !== row.meta.hex;
-    const used = lookupUsage(items, list, row.value);
+    const reslotted = isCategory && editSlot !== (row.meta.slot ?? guessSlot(row.value));
+    const used = usage(row.value);
     run(async () => {
       if (renamed) await manage.renameLookup(list, row.value, value);
-      if (recoloured) await manage.updateLookupMeta(row.id, { ...row.meta, hex });
+      if (recoloured || reslotted) {
+        await manage.updateLookupMeta(row.id, { ...row.meta, ...(recoloured ? { hex } : {}), ...(reslotted ? { slot: editSlot } : {}) });
+      }
       setEditing(null);
     }, renamed && used ? `Renamed to "${value}" and updated ${used} ${used === 1 ? 'piece' : 'pieces'}.` : 'Saved.');
   }
@@ -103,7 +117,7 @@ function ListEditorBody({ list }: { list: LookupList }) {
       setError('Keep at least one category, or you won’t be able to add pieces.');
       return;
     }
-    const used = lookupUsage(items, list, row.value);
+    const used = list === 'mood' ? 0 : lookupUsage(items, list, row.value);
     const message = used
       ? `Remove "${row.value}" from ${info.title.toLowerCase()}?\n\n${used} ${used === 1 ? 'piece uses' : 'pieces use'} it. They’ll keep "${row.value}", but it won’t be offered as an option any more.`
       : `Remove "${row.value}" from ${info.title.toLowerCase()}?`;
@@ -156,7 +170,7 @@ function ListEditorBody({ list }: { list: LookupList }) {
 
       <ul className="mlist">
         {rows.map((row, index) => {
-          const used = lookupUsage(items, list, row.value);
+          const used = usage(row.value);
           if (editing?.id === row.id) {
             return (
               <li key={row.id} className="mrow mrow-editing">
@@ -190,9 +204,21 @@ function ListEditorBody({ list }: { list: LookupList }) {
                       <span>Multicolour swatch</span>
                     </label>
                   )}
+                  {isCategory && (
+                    <label className="field" htmlFor="edit-slot">
+                      <span className="field-label">Place in outfits</span>
+                      <select id="edit-slot" className="input" value={editSlot} onChange={(e) => setEditSlot(e.target.value as SlotKey)}>
+                        {(['top', 'bottom', 'full', 'outer', 'shoes', 'accessory', 'none'] as SlotKey[]).map((k) => (
+                          <option key={k} value={k}>
+                            {SLOT_LABELS[k]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   {used > 0 && editValue.trim() !== row.value && (
                     <p className="meta">
-                      Renaming also updates the {used} {used === 1 ? 'piece' : 'pieces'} that use it.
+                      Renaming also updates the {used} {list === 'mood' ? (used === 1 ? 'outfit' : 'outfits') : used === 1 ? 'piece' : 'pieces'} that use it.
                     </p>
                   )}
                   <div className="mrow-edit-actions">
@@ -214,7 +240,10 @@ function ListEditorBody({ list }: { list: LookupList }) {
                   {isColour && <Swatch hex={row.meta.hex ?? null} size={16} />}
                   {row.value}
                 </span>
-                <span className="mrow-meta">{piecesLabel(used)}</span>
+                <span className="mrow-meta">
+                  {isCategory ? `${SLOT_LABELS[row.meta.slot ?? guessSlot(row.value)]}. ` : ''}
+                  {usageLabel(row.value)}
+                </span>
               </div>
               <div className="mrow-actions">
                 <button type="button" className="icon-button" aria-label={`Move ${row.value} up`} disabled={busy || index === 0} onClick={() => reorder(index, -1)}>
