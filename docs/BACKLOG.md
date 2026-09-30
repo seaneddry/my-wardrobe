@@ -21,12 +21,18 @@ Move finished items into `CHANGELOG.md`.
 - [x] Saved outfits with collages, favourites, occasion and mood
 - [x] AI stylist (Gemini) suggesting outfits by occasion, mood, weather and notes
 
-## Next: v1.4 — Wear log and stats
+## Done in v1.4
+
+- [x] Headwear in the builder and stylist; shoes always suggested
+- [x] Bigger, easier builder (arrows, grid picker, outfit strip)
+- [x] Seasons removed
+
+## Next: v1.5 — Wear log and stats
 
 - [ ] "Wore this today" on a piece and on a saved outfit
 - [ ] Stats: most worn, least worn, not worn in 90+ days, cost per wear
 - [ ] Stylist avoids pieces worn in the last few days
-- [ ] Database: `wear_log` table (migration 005)
+- [ ] Database: `wear_log` table (migration 006)
 
 ## CMS extras (unscheduled)
 

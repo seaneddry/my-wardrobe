@@ -6,7 +6,7 @@ import type { LookupList } from './types';
  * or in the web CMS once it ships in v1.1.
  */
 export const DEFAULT_LOOKUPS: Record<LookupList, Array<string | { value: string; hex: string }>> = {
-  category: ['Tops', 'Shirts', 'Knitwear', 'Bottoms', 'Dresses', 'Outerwear', 'Suits', 'Shoes', 'Bags', 'Accessories', 'Activewear', 'Loungewear'],
+  category: ['Tops', 'Shirts', 'Knitwear', 'Bottoms', 'Dresses', 'Outerwear', 'Suits', 'Shoes', 'Hats', 'Bags', 'Accessories', 'Activewear', 'Loungewear'],
   colour: [
     { value: 'Black', hex: '#1B1B1B' },
     { value: 'White', hex: '#FAFAF7' },
@@ -28,7 +28,6 @@ export const DEFAULT_LOOKUPS: Record<LookupList, Array<string | { value: string;
     { value: 'Multi', hex: 'multi' },
   ],
   size: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free size'],
-  season: ['Spring', 'Summer', 'Autumn', 'Winter', 'All year'],
   occasion: ['Casual', 'Work', 'Smart casual', 'Formal', 'Sport', 'Travel', 'Home'],
   condition: ['New', 'Excellent', 'Good', 'Fair', 'Worn out'],
   mood: ['Relaxed', 'Confident', 'Polished', 'Cozy', 'Bold', 'Minimal', 'Playful', 'Low-key'],

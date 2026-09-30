@@ -87,7 +87,7 @@ export function Settings() {
           </div>
         </Group>
 
-        <Group header="Wardrobe" footer="Categories, colours, sizes, seasons, occasions, conditions, and extra fields for the item form.">
+        <Group header="Wardrobe" footer="Categories and their place in outfits, colours, sizes, occasions, conditions, moods, and extra fields for the item form.">
           <Link to="/manage" viewTransition className="row">
             <span className="row-icon">
               <Icon name="list" size={18} />

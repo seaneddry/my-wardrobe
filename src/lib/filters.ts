@@ -7,7 +7,6 @@ export interface Filters {
   category: string | null;
   colours: string[];
   sizes: string[];
-  seasons: string[];
   occasions: string[];
   status: 'active' | 'archived' | 'all';
   sort: SortKey;
@@ -18,7 +17,6 @@ export const DEFAULT_FILTERS: Filters = {
   category: null,
   colours: [],
   sizes: [],
-  seasons: [],
   occasions: [],
   status: 'active',
   sort: 'newest',
@@ -36,7 +34,9 @@ const STORE_KEY = 'wardrobe-filters';
 export function loadFilters(): Filters {
   try {
     const raw = sessionStorage.getItem(STORE_KEY);
-    return raw ? { ...DEFAULT_FILTERS, ...JSON.parse(raw) } : DEFAULT_FILTERS;
+    if (!raw) return DEFAULT_FILTERS;
+    const { seasons: _old, ...saved } = JSON.parse(raw);
+    return { ...DEFAULT_FILTERS, ...saved };
   } catch {
     return DEFAULT_FILTERS;
   }
@@ -52,7 +52,7 @@ export function saveFilters(f: Filters): void {
 
 /** Number of filters set in the filter sheet (search and category chips are visible on screen). */
 export function sheetFilterCount(f: Filters): number {
-  return f.colours.length + f.sizes.length + f.seasons.length + f.occasions.length + (f.status !== 'active' ? 1 : 0);
+  return f.colours.length + f.sizes.length + f.occasions.length + (f.status !== 'active' ? 1 : 0);
 }
 
 function searchText(item: Item): string {
@@ -66,7 +66,6 @@ function searchText(item: Item): string {
     item.brand,
     item.size,
     item.notes,
-    ...item.seasons,
     ...item.occasions,
     ...Object.values(item.attributes).flat().map((v) => (v === null ? '' : String(v))),
   ]
@@ -84,10 +83,6 @@ export function applyFilters(items: Item[], f: Filters): Item[] {
     if (f.category && item.category !== f.category) return false;
     if (f.colours.length && !f.colours.some((c) => c === item.colour || c === item.secondary_colour)) return false;
     if (f.sizes.length && !(item.size && f.sizes.includes(item.size))) return false;
-    if (f.seasons.length) {
-      const allYear = item.seasons.some((s) => s.toLowerCase() === 'all year');
-      if (!allYear && !overlaps(f.seasons, item.seasons)) return false;
-    }
     if (f.occasions.length && !overlaps(f.occasions, item.occasions)) return false;
     if (terms.length) {
       const text = searchText(item);

@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { NavBar } from '../../components/NavBar';
 import { SaveOutfitSheet, type OutfitDetails } from '../../components/SaveOutfitSheet';
+import { LookStrip } from '../../components/LookStrip';
+import { SlotPicker } from '../../components/SlotPicker';
 import { SlotRow } from '../../components/SlotRow';
 import { useToast } from '../../components/Toast';
 import type { Outfit, OutfitPiece } from '../../data/types';
@@ -10,6 +12,7 @@ import { errorMessage } from '../../lib/format';
 import {
   BUILDER_SLOTS,
   defaultOutfitName,
+  EMPTY_HINTS,
   EMPTY_SELECTION,
   OPTIONAL_SLOTS,
   piecesByRow,
@@ -68,6 +71,7 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState<BuilderSlot | null>(null);
 
   const slotOf = (id: string) => slotForCategory(items.find((i) => i.id === id)?.category ?? '', categories);
   const isFull = (id: string | null) => (id ? slotOf(id) === 'full' : false);
@@ -96,6 +100,21 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
   }, [baseRows, sel, items]);
 
   const hasCore = rows.top.length > 0 && (rows.bottom.length > 0 || rows.top.some((i) => isFull(i.id)));
+
+  // If the wardrobe finished loading after the builder opened, start with a shuffled outfit.
+  // Required rows (top, shoes) always hold a piece when any exist.
+  useEffect(() => {
+    setSel((current) => {
+      const empty = BUILDER_SLOTS.every((slot) => !current[slot]);
+      let next = empty && !existing && !seed ? shuffle(current, new Set(), rows, isFull) : current;
+      for (const slot of ['top', 'shoes'] as const) {
+        if (!next[slot] && rows[slot].length) next = { ...next, [slot]: rows[slot][0].id };
+      }
+      if (!next.bottom && !isFull(next.top) && rows.bottom.length && empty) next = { ...next, bottom: rows.bottom[0].id };
+      return next === current ? current : next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, categories.length]);
   const pieces = selectionToPieces(sel, slotOf);
   const topIsFull = isFull(sel.top);
 
@@ -148,7 +167,15 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
     }
   }
 
-  const visibleSlots = BUILDER_SLOTS.filter((slot) => rows[slot].length > 0);
+  // Every row is shown, even when empty, so it's clear what the outfit can include.
+  const visibleSlots = [...BUILDER_SLOTS];
+  const rowLabel = (slot: BuilderSlot) =>
+    slot === 'top' && rows.top.some((i) => isFull(i.id)) ? 'Top or dress' : SLOT_LABELS[slot];
+  const isOptional = (slot: BuilderSlot) => OPTIONAL_SLOTS.has(slot) || slot === 'bottom';
+
+  function jumpTo(slot: BuilderSlot) {
+    document.getElementById(`slot-${slot}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   return (
     <div className="screen builder">
@@ -182,6 +209,8 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
         </div>
       ) : (
         <>
+          <LookStrip sel={sel} items={items} shown={visibleSlots} onJump={jumpTo} />
+
           <div className="pill-row builder-occasions" role="group" aria-label="Shuffle for occasion">
             {[null, ...lookups('occasion').map((l) => l.value)].map((o) => (
               <button key={o ?? 'any'} type="button" className={`pill${occasion === o ? ' pill-on' : ''}`} aria-pressed={occasion === o} onClick={() => setOccasion(o)}>
@@ -206,13 +235,16 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
             {visibleSlots.map((slot, n) => (
               <SlotRow
                 key={slot}
-                label={slot === 'top' && rows.top.some((i) => isFull(i.id)) ? 'Top or dress' : SLOT_LABELS[slot]}
+                id={`slot-${slot}`}
+                label={rowLabel(slot)}
                 items={rows[slot]}
                 selectedId={sel[slot]}
                 onSelect={(id) => select(slot, id)}
-                optional={OPTIONAL_SLOTS.has(slot) || slot === 'bottom'}
+                optional={isOptional(slot)}
                 locked={locked.has(slot)}
                 onToggleLock={() => toggleLock(slot)}
+                onSeeAll={() => setPicking(slot)}
+                emptyHint={EMPTY_HINTS[slot]}
                 disabledNote={slot === 'bottom' && topIsFull ? 'Covered by the one-piece above' : undefined}
                 delay={n * 70}
               />
@@ -228,6 +260,18 @@ function BuilderBody({ existing }: { existing?: Outfit }) {
             </Link>
           </div>
         </>
+      )}
+
+      {picking && (
+        <SlotPicker
+          open
+          onClose={() => setPicking(null)}
+          label={rowLabel(picking)}
+          items={rows[picking]}
+          selectedId={sel[picking]}
+          optional={isOptional(picking)}
+          onSelect={(id) => select(picking, id)}
+        />
       )}
 
       {saveOpen && (

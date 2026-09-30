@@ -65,7 +65,7 @@ src/
     photos.ts               Photo compression, upload and cached viewing links
     functions.ts            Calls this project's Edge Functions as the signed-in user
     webImages.ts            Online photo search (image-search function)
-    stylist.ts              AI stylist (stylist function); checks answers against real pieces
+    stylist.ts              AI stylist: its instructions (STYLIST_RULES), weather options, and checks on answers
     defaults.ts             Starter lists added on first sign-in
   state/                    Login state and the shared data store
   pages/                    One file per screen
@@ -81,6 +81,10 @@ docs/                       Setup, upgrading, maintenance, backlog
 The screens never call Supabase directly. They go through `repository.ts`. To change where data lives, such as adding offline sync later, write a new implementation of that interface and switch to it in `state/data.tsx`. The screens don't need to change.
 
 ---
+
+## Changing how the stylist behaves
+
+Edit `STYLIST_RULES` in `src/data/stylist.ts` (plain English instructions) and release the app as usual. No function redeploy is needed; the function only falls back to its own copy if the app doesn't send any.
 
 ## Updating an Edge Function
 

@@ -4,7 +4,7 @@ export const LIST_INFO: Record<LookupList, { title: string; noun: string; help: 
   category: {
     title: 'Categories',
     noun: 'category',
-    help: 'The main groups your pieces are sorted into. Every piece needs one. Each category also has a place in outfits (top, bottom, shoes and so on), which the outfit builder and stylist use; tap edit to change it.',
+    help: 'The main groups your pieces are sorted into. Every piece needs one. Each category also has a place in outfits (headwear, top, bottom, shoes and so on), which the outfit builder and stylist use; tap edit to change it.',
   },
   colour: {
     title: 'Colours',
@@ -16,7 +16,6 @@ export const LIST_INFO: Record<LookupList, { title: string; noun: string; help: 
     noun: 'size',
     help: 'Suggested when you type a size. You can still enter any size on a piece, such as 32 or 42.',
   },
-  season: { title: 'Seasons', noun: 'season', help: 'A piece can have several. "All year" pieces match any season filter.' },
   occasion: { title: 'Occasions', noun: 'occasion', help: 'A piece can have several. Used for filtering.' },
   condition: { title: 'Conditions', noun: 'condition', help: 'How worn a piece is. A piece has at most one.' },
   mood: { title: 'Moods', noun: 'mood', help: 'How you want to feel. Offered to the stylist and when saving an outfit.' },
@@ -45,8 +44,6 @@ export function lookupUsage(items: Item[], list: LookupList, value: string): num
         return i.size === value;
       case 'condition':
         return i.condition === value;
-      case 'season':
-        return i.seasons.includes(value);
       case 'occasion':
         return i.occasions.includes(value);
       case 'mood':

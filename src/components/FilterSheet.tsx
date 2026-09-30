@@ -75,7 +75,6 @@ export function FilterSheet({ open, filters, onChange, onClose, resultCount }: {
         />,
       )}
       {section('Size', <Chips multiple label="Size" options={sizeOptions.length ? sizeOptions : opts('size')} value={filters.sizes} onChange={(sizes) => set({ sizes })} />)}
-      {section('Season', <Chips multiple label="Season" options={opts('season')} value={filters.seasons} onChange={(seasons) => set({ seasons })} />)}
       {section('Occasion', <Chips multiple label="Occasion" options={opts('occasion')} value={filters.occasions} onChange={(occasions) => set({ occasions })} />)}
       {section(
         'Show',

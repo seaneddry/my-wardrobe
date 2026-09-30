@@ -88,7 +88,6 @@ export function ItemDetail() {
     ['Category', current.category],
     ['Type', current.item_type ?? ''],
     ['Second colour', current.secondary_colour ?? ''],
-    ['Season', current.seasons.join(', ')],
     ['Occasion', current.occasions.join(', ')],
     ['Bought', formatDate(current.purchase_date)],
     ['Price', formatPrice(current.price)],

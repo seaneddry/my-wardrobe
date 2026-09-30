@@ -256,10 +256,6 @@ function ItemFormBody({ existing }: { existing?: Item }) {
           </label>
         </Group>
 
-        <Group header="Season" pad>
-          <Chips multiple label="Season" options={lookups('season').map((l) => ({ value: l.value }))} value={form.seasons} onChange={(v) => update('seasons', v)} />
-        </Group>
-
         <Group header="Occasion" pad>
           <Chips multiple label="Occasion" options={lookups('occasion').map((l) => ({ value: l.value }))} value={form.occasions} onChange={(v) => update('occasions', v)} />
         </Group>

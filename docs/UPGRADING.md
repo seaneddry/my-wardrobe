@@ -7,6 +7,37 @@ Use this whenever you receive a new version of the code. Two rules:
 
 ---
 
+## 1.3.x → 1.4.0 (hats in outfits, bigger builder, no seasons)
+
+This version adds `supabase/migrations/005_headwear.sql` and updates the `stylist` function one last time. After this, the stylist's instructions live in the app (`src/data/stylist.ts`), so future stylist changes won't need a function redeploy.
+
+### Part A — Update the database (1 minute)
+
+1. Go to https://supabase.com/dashboard/project/_/sql/new
+2. Paste the contents of `supabase/migrations/005_headwear.sql` and click **Run**.
+
+This adds a **Hats** category (placed in the Headwear row of outfits), unless you already have one.
+
+### Part B — Update the code
+
+1. Unzip the new `my-wardrobe.zip`.
+2. In GitHub Desktop, click **Repository → Show in Finder / Show in Explorer**, and turn on hidden files.
+3. Go *inside* the new unzipped folder, select all, copy. Go *inside* your project folder (the one with `.git`), paste, and choose **Replace** (tick **Apply to All** on Mac).
+4. In GitHub Desktop, type `v1.4.0` in **Summary**, click **Commit to main**, then **Push origin**.
+
+### Part C — Update the stylist function
+
+1. Go to https://supabase.com/dashboard/project/_/functions, click **stylist**, and open the **Code** tab.
+2. Select all, delete, paste the contents of `supabase/functions/stylist/index.ts` from the new zip, and click **Deploy**.
+
+### Part D — Check it
+
+1. Wait for the green tick at https://github.com/YOUR-USERNAME/my-wardrobe/actions, then hard-refresh (or swipe the app away on iPhone and reopen twice). **Settings → About** should show **1.4.0** and database **005**.
+2. Add a hat or cap as a piece, using the **Hats** category.
+3. Open **Outfits → +**. You'll see a Headwear row at the top and a strip of your whole outfit under the title bar.
+
+---
+
 ## 1.2.0 → 1.3.0 (outfit builder, saved outfits, AI stylist)
 
 This version adds `supabase/migrations/004_outfits.sql` and a second server function, `stylist`. Parts A–C take about 10 minutes. Part D (the AI stylist) takes about 10 minutes and is optional: the builder, Shuffle and saved outfits work without it.

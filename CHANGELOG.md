@@ -2,6 +2,37 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.4.0 — 2026-09-30
+
+Hats in outfits, a bigger builder, and no seasons.
+
+- **Headwear** row in the outfit builder (hats, caps); new **Hats** category; categories named cap, beanie, beret and similar go there automatically
+- The stylist can add headwear, always includes shoes when you have them, and knows it's dressing someone in Malaysia (heat, humidity, rain, air-conditioning)
+- Weather options: Hot and sunny, Humid, Rainy, Cool (air-con)
+- Builder redesign: much larger photos, ‹ › buttons on every row, **See all** (or tap the centred piece) for a grid of options, a sticky strip showing the whole outfit (tap to jump to a row), and every row always visible with an "Add one" hint when empty
+- Fixed: opening the builder before the wardrobe finished loading left Save disabled
+- Outfit collages show up to 6 pieces
+- **Seasons removed** from the form, piece page, filters, Manage and the stylist. Stored season data is kept but unused
+- The stylist's instructions now live in the app, so they can change without redeploying the function
+- Database migration 005; `stylist` function v1.4.0
+
+## 1.3.3 — 2026-09-30
+
+Stylist function only (redeploy `supabase/functions/stylist/index.ts`).
+
+- Tries Flash-Lite first (largest free allowance), then Flash
+- When one model is out of free requests or not in the free tier, moves on to the next instead of stopping
+- One attempt per model, to avoid using up the daily allowance
+- Error messages say which models were tried and why each failed, and when limits reset
+
+## 1.3.2 — 2026-09-29
+
+Stylist function only (redeploy `supabase/functions/stylist/index.ts`; no app or database change).
+
+- Finds the Gemini models your key can use automatically, instead of relying on fixed model names
+- Alternates between Flash and Flash-Lite models, and retries once when Google reports high demand
+- Clear "Google's AI is busy" message instead of a technical error
+
 ## 1.3.0 — 2026-09-29
 
 Outfits and an AI stylist.

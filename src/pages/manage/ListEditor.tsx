@@ -208,7 +208,7 @@ function ListEditorBody({ list }: { list: LookupList }) {
                     <label className="field" htmlFor="edit-slot">
                       <span className="field-label">Place in outfits</span>
                       <select id="edit-slot" className="input" value={editSlot} onChange={(e) => setEditSlot(e.target.value as SlotKey)}>
-                        {(['top', 'bottom', 'full', 'outer', 'shoes', 'accessory', 'none'] as SlotKey[]).map((k) => (
+                        {(['head', 'outer', 'top', 'bottom', 'full', 'shoes', 'accessory', 'none'] as SlotKey[]).map((k) => (
                           <option key={k} value={k}>
                             {SLOT_LABELS[k]}
                           </option>

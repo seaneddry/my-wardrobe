@@ -1,4 +1,6 @@
-export const LOOKUP_LISTS = ['category', 'colour', 'size', 'season', 'occasion', 'condition', 'mood'] as const;
+// Seasons were removed from the app in 1.4 (not relevant in Malaysia). The seasons
+// column and any stored values remain in the database, unused.
+export const LOOKUP_LISTS = ['category', 'colour', 'size', 'occasion', 'condition', 'mood'] as const;
 export type LookupList = (typeof LOOKUP_LISTS)[number];
 
 export interface Lookup {
@@ -10,7 +12,7 @@ export interface Lookup {
 }
 
 /** Where a category's pieces go in an outfit. "full" covers top and bottom (dresses, jumpsuits). */
-export type SlotKey = 'outer' | 'top' | 'bottom' | 'full' | 'shoes' | 'accessory' | 'none';
+export type SlotKey = 'head' | 'outer' | 'top' | 'bottom' | 'full' | 'shoes' | 'accessory' | 'none';
 
 export interface OutfitPiece {
   slot: SlotKey;

@@ -1,10 +1,11 @@
 import type { Item, Lookup, Outfit, OutfitPiece, SlotKey } from '../data/types';
 
 /** Rows of the outfit builder, top to bottom. */
-export const BUILDER_SLOTS = ['outer', 'top', 'bottom', 'shoes', 'accessory'] as const;
+export const BUILDER_SLOTS = ['head', 'outer', 'top', 'bottom', 'shoes', 'accessory'] as const;
 export type BuilderSlot = (typeof BUILDER_SLOTS)[number];
 
 export const SLOT_LABELS: Record<SlotKey, string> = {
+  head: 'Headwear',
   outer: 'Outerwear',
   top: 'Top',
   bottom: 'Bottom',
@@ -15,16 +16,27 @@ export const SLOT_LABELS: Record<SlotKey, string> = {
 };
 
 /** Slots that can be left empty in an outfit. */
-export const OPTIONAL_SLOTS = new Set<BuilderSlot>(['outer', 'accessory']);
+export const OPTIONAL_SLOTS = new Set<BuilderSlot>(['head', 'outer', 'accessory']);
+
+/** Short hints shown in an empty builder row. */
+export const EMPTY_HINTS: Record<BuilderSlot, string> = {
+  head: 'No hats or caps yet',
+  outer: 'No outerwear yet',
+  top: 'No tops yet',
+  bottom: 'No bottoms yet',
+  shoes: 'No shoes yet',
+  accessory: 'No accessories yet',
+};
 
 /** Best guess for a category's slot from its name, used until one is set in Manage. */
 export function guessSlot(category: string): SlotKey {
   const c = category.toLowerCase();
+  if (/\bhats?\b|\bcaps?\b|beanie|beret|fedora|bucket|headwear|headband|visor/.test(c)) return 'head';
   if (/dress|jumpsuit|romper|playsuit|overall|dungaree|kurung|kebaya|abaya|saree|sari/.test(c)) return 'full';
   if (/outer|jacket|coat|blazer|suit|parka|cardigan|vest|gilet/.test(c)) return 'outer';
   if (/bottom|trouser|pant|jean|short|skirt|chino|legging|sarong/.test(c)) return 'bottom';
   if (/shoe|sneaker|trainer|boot|sandal|loafer|heel|slipper|footwear/.test(c)) return 'shoes';
-  if (/bag|accessor|hat|cap|belt|scarf|jewel|watch|tie|sock|glass|sunglass|wallet|ring|necklace/.test(c)) return 'accessory';
+  if (/bag|accessor|belt|scarf|jewel|watch|tie|sock|glass|sunglass|wallet|ring|necklace/.test(c)) return 'accessory';
   if (/top|shirt|tee|knit|sweater|jumper|hoodie|blouse|polo|tank|activewear|sport/.test(c)) return 'top';
   return 'none';
 }
@@ -43,11 +55,11 @@ export function rowForSlot(slot: SlotKey): BuilderSlot | null {
 
 export type Selection = Record<BuilderSlot, string | null>;
 
-export const EMPTY_SELECTION: Selection = { outer: null, top: null, bottom: null, shoes: null, accessory: null };
+export const EMPTY_SELECTION: Selection = { head: null, outer: null, top: null, bottom: null, shoes: null, accessory: null };
 
 /** Groups active pieces into builder rows, optionally keeping only those for an occasion. */
 export function piecesByRow(items: Item[], categories: Lookup[], occasion: string | null): Record<BuilderSlot, Item[]> {
-  const rows: Record<BuilderSlot, Item[]> = { outer: [], top: [], bottom: [], shoes: [], accessory: [] };
+  const rows: Record<BuilderSlot, Item[]> = { head: [], outer: [], top: [], bottom: [], shoes: [], accessory: [] };
   for (const item of items) {
     if (item.status !== 'active') continue;
     const row = rowForSlot(slotForCategory(item.category, categories));
@@ -112,7 +124,7 @@ export function piecesToSelection(pieces: OutfitPiece[]): Selection {
 
 /** Pieces of an outfit that still exist, in display order. */
 export function outfitItems(outfit: Pick<Outfit, 'pieces'>, items: Item[]): Item[] {
-  const order: SlotKey[] = ['outer', 'top', 'full', 'bottom', 'shoes', 'accessory', 'none'];
+  const order: SlotKey[] = ['head', 'outer', 'top', 'full', 'bottom', 'shoes', 'accessory', 'none'];
   return [...outfit.pieces]
     .sort((a, b) => order.indexOf(a.slot) - order.indexOf(b.slot))
     .map((p) => items.find((i) => i.id === p.item_id))
