@@ -2929,3 +2929,111 @@ select.input:disabled {
 .stylist-bar .button {
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
 }
+
+
+/* =========================================== Find similar and fill in details */
+
+.photo-actions .button-wide + .button,
+.photo-actions .button-wide + .button + .button {
+  font-size: 15px;
+}
+
+.ai-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 16px 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fill);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ai-note svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.ai-note.is-busy {
+  align-items: center;
+  color: var(--ink-2);
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  flex: none;
+}
+
+.lens-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.lens-thumb {
+  flex: none;
+  width: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.lens-thumb .strip-preview,
+.lens-thumb .photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.lens-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.lens-text strong {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.lens-switch {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--focus);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.web-price {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 6px;
+  border-radius: 7px;
+  background: rgb(0 0 0 / 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.web-preview-price {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 700;
+}

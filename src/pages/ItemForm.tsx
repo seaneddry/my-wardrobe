@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chips } from '../components/Chips';
 import { CustomFieldRow, CustomMultiselect } from '../components/CustomField';
 import { Group } from '../components/Group';
+import { Icon } from '../components/Icon';
 import { NavBar } from '../components/NavBar';
-import { MAX_PHOTOS, PhotoStrip } from '../components/PhotoStrip';
+import { isOwnPhoto, MAX_PHOTOS, PhotoStrip } from '../components/PhotoStrip';
 import { Swatch } from '../components/Swatch';
 import { useToast } from '../components/Toast';
-import { WebImageSearch } from '../components/WebImageSearch';
+import { WebImageSearch, type SearchPhoto } from '../components/WebImageSearch';
+import { describePhoto, type PhotoDetails } from '../data/describe';
+import { NotSetUpError } from '../data/functions';
 import type { PhotoDraft } from '../data/repository';
 import { emptyItemFields, type AttributeValue, type Item, type ItemFields } from '../data/types';
 import { buildQuery } from '../data/webImages';
@@ -60,6 +63,13 @@ function ItemFormBody({ existing }: { existing?: Item }) {
     (existing?.photos ?? []).map((photo) => ({ kind: 'stored', key: photo.path, photo })),
   );
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchPhoto, setSearchPhoto] = useState<SearchPhoto | null>(null);
+  const [describing, setDescribing] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const autoFilled = useRef(false);
+  // Latest form values, so a slow photo read fills in against what's on screen now.
+  const formRef = useRef(form);
+  formRef.current = form;
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +94,62 @@ function ItemFormBody({ existing }: { existing?: Item }) {
   }
 
   const text = (v: string) => (v.trim() === '' ? null : v);
+
+  const photoInput = (p: PhotoDraft) => (p.kind === 'stored' ? { path: p.photo.path } : { blob: p.blob });
+
+  function findSimilar(p: PhotoDraft) {
+    setSearchPhoto({ key: p.key, input: photoInput(p) });
+    setSearchOpen(true);
+  }
+
+  /** Fills in only the fields that are still empty, so nothing you typed is overwritten. */
+  function applyDetails(d: PhotoDetails): string[] {
+    const filled: string[] = [];
+    const f = formRef.current;
+    const next = { ...f };
+    {
+      if (!f.category && d.category) (next.category = d.category), filled.push('category');
+      if (!f.name && d.name) (next.name = d.name), filled.push('name');
+      if (!f.item_type && d.item_type) (next.item_type = d.item_type), filled.push('type');
+      if (!f.brand && d.brand) (next.brand = d.brand), filled.push('brand');
+      if (!f.colour && d.colour) (next.colour = d.colour), filled.push('colour');
+      if (!f.secondary_colour && d.secondary_colour && d.secondary_colour !== (next.colour ?? f.colour)) {
+        next.secondary_colour = d.secondary_colour;
+        filled.push('second colour');
+      }
+      if (f.occasions.length === 0 && d.occasions.length) (next.occasions = d.occasions), filled.push('occasions');
+    }
+    if (filled.length) setForm(next);
+    return filled;
+  }
+
+  async function describe(p: PhotoDraft) {
+    setDescribing(true);
+    setAiNote(null);
+    try {
+      const details = await describePhoto(photoInput(p), {
+        categories: lookups('category').map((l) => l.value),
+        colours: lookups('colour').map((l) => l.value),
+        occasions: lookups('occasion').map((l) => l.value),
+      });
+      const filled = applyDetails(details);
+      if (filled.length) {
+        setDirty(true);
+        setAiNote(`Filled in ${filled.join(', ')} from the photo. Check them before saving.`);
+        toast(`Filled in ${filled.length} ${filled.length === 1 ? 'detail' : 'details'}`);
+      } else {
+        setAiNote('Your details are already filled in, so nothing was changed. Clear a field first if you want the photo to fill it.');
+      }
+    } catch (err) {
+      setAiNote(
+        err instanceof NotSetUpError
+          ? 'Filling in details needs the AI stylist set up (a free Gemini key). See “Set up the AI stylist” in docs/UPGRADING.md.'
+          : errorMessage(err),
+      );
+    } finally {
+      setDescribing(false);
+    }
+  }
 
   function cancel() {
     if (dirty && !window.confirm('Discard your changes?')) return;
@@ -176,11 +242,36 @@ function ItemFormBody({ existing }: { existing?: Item }) {
           <PhotoStrip
             photos={photos}
             onChange={(next) => {
+              // New piece: read the first photo you take or pick, and fill in the details automatically.
+              const first = next.find(isOwnPhoto);
+              if (!existing && !autoFilled.current && photos.length === 0 && first && first.kind === 'new') {
+                autoFilled.current = true;
+                describe(first);
+              }
               setPhotos(next);
               setDirty(true);
             }}
-            onFindOnline={() => setSearchOpen(true)}
+            onFindOnline={() => {
+              setSearchPhoto(null);
+              setSearchOpen(true);
+            }}
+            onFindSimilar={findSimilar}
+            onDescribe={describe}
+            describing={describing}
           />
+          {(describing || aiNote) && (
+            <p className={`ai-note${describing ? ' is-busy' : ''}`} role="status">
+              {describing ? (
+                <>
+                  <span className="spinner spinner-small" /> Reading your photo…
+                </>
+              ) : (
+                <>
+                  <Icon name="sparkles" size={15} /> {aiNote}
+                </>
+              )}
+            </p>
+          )}
         </Group>
 
         <Group header="Category" pad>
@@ -318,6 +409,7 @@ function ItemFormBody({ existing }: { existing?: Item }) {
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         initialQuery={searchQuery}
+        photo={searchPhoto}
         room={MAX_PHOTOS - photos.length}
         onAdd={(images) => {
           setPhotos((prev) => [

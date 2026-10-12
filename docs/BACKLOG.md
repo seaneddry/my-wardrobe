@@ -27,7 +27,12 @@ Move finished items into `CHANGELOG.md`.
 - [x] Bigger, easier builder (arrows, grid picker, outfit strip)
 - [x] Seasons removed
 
-## Next: v1.5 — Wear log and stats
+## Done in v1.5
+
+- [x] Find similar items online from a photo (Google Lens)
+- [x] Fill in a piece's details from a photo (Gemini)
+
+## Next: v1.6 — Wear log and stats
 
 - [ ] "Wore this today" on a piece and on a saved outfit
 - [ ] Stats: most worn, least worn, not worn in 90+ days, cost per wear

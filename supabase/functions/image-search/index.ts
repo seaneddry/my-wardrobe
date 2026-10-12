@@ -1,9 +1,12 @@
 // =============================================================================
 // My Wardrobe — Edge Function "image-search"
 //
-// Two jobs, both for signed-in users only:
+// Three jobs, all for signed-in users only:
 //   { action: "search", query }  → finds product photos online (Google Images via SerpApi)
+//   { action: "lens",   url }    → finds items that look like your photo (Google Lens via SerpApi);
+//                                  url must be a temporary signed link to this project's storage
 //   { action: "fetch",  url }    → downloads one chosen photo so the app can save a copy
+// Version 1.5.0
 //
 // Secrets (Supabase → Edge Functions → Secrets):
 //   SERPAPI_KEY      required — free key from serpapi.com (250 searches/month, no card)
@@ -40,6 +43,7 @@ interface Result {
   page: string;
   width?: number;
   height?: number;
+  price?: string;
 }
 
 async function searchSerpApi(query: string, key: string): Promise<Result[]> {
@@ -93,6 +97,40 @@ async function search(query: unknown): Promise<Response> {
   return json({ results: clean });
 }
 
+/** Google Lens: items that look like the photo at `url` (a signed link to this project's storage). */
+async function lens(url: unknown): Promise<Response> {
+  const base = Deno.env.get('SUPABASE_URL');
+  if (typeof url !== 'string' || !base || !url.startsWith(`${base}/storage/v1/object/sign/`)) {
+    return json({ error: 'That photo link isn’t allowed.' }, 400);
+  }
+  const key = Deno.env.get('SERPAPI_KEY');
+  if (!key) {
+    if (Deno.env.get('BRAVE_API_KEY')) return json({ error: 'Searching by photo needs a SerpApi key (SERPAPI_KEY).' }, 400);
+    return json({ error: 'not_configured' }, 503);
+  }
+  // country=my favours shops and prices in Malaysia.
+  const params = new URLSearchParams({ engine: 'google_lens', url, api_key: key, hl: 'en', country: 'my' });
+  const res = await fetch(`https://serpapi.com/search.json?${params}`, { signal: AbortSignal.timeout(30000) });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    if (typeof data.error === 'string' && /hasn't returned any results/i.test(data.error)) return json({ results: [] });
+    throw new Error(data.error ?? `Search service error (${res.status})`);
+  }
+  // deno-lint-ignore no-explicit-any
+  const results: Result[] = (data.visual_matches ?? []).map((i: any) => ({
+    thumbnail: i.thumbnail,
+    original: i.image ?? i.thumbnail,
+    title: i.title ?? '',
+    source: i.source ?? '',
+    page: i.link ?? '',
+    width: i.image_width,
+    height: i.image_height,
+    price: i.price?.value,
+  }));
+  const clean = results.filter((r) => r.thumbnail && r.original?.startsWith('http')).slice(0, 40);
+  return json({ results: clean });
+}
+
 /** Blocks requests to local or private network addresses. */
 function isPublicUrl(raw: string): boolean {
   let url: URL;
@@ -141,6 +179,7 @@ Deno.serve(async (req) => {
     if (!(await isSignedIn(req))) return json({ error: 'Please sign in again.' }, 401);
     const body = await req.json().catch(() => ({}));
     if (body.action === 'search') return await search(body.query);
+    if (body.action === 'lens') return await lens(body.url);
     if (body.action === 'fetch') return await fetchImage(body.url);
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {

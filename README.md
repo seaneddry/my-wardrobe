@@ -4,10 +4,11 @@ A personal app for cataloguing clothes and deciding what to wear. Mobile-first, 
 
 **Setting it up for the first time?** Follow [`docs/SETUP.md`](docs/SETUP.md).
 
-## What it does (v1.4)
+## What it does (v1.5)
 
 - A native-feeling iPhone app: large titles, frosted bars, sheets, light and dark mode
-- Several photos per piece in a swipeable carousel, from the camera, your library, or **found online** (you approve each one)
+- Several photos per piece in a swipeable carousel, from the camera, your library, or **found online** by words or by photo (you approve each one)
+- Snap a piece and its details fill in by themselves (Google Gemini), limited to your own lists
 - Details for each piece: category, type, colours, size, brand, occasions, date bought, price, condition, notes, plus any custom fields you define
 - Browse, search, filter and sort your wardrobe
 - Archive pieces you no longer wear without losing their record

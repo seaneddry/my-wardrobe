@@ -7,7 +7,7 @@ import { ActionSheet, type SheetAction } from './Sheet';
 
 export const MAX_PHOTOS = 10;
 
-function NewThumb({ blob }: { blob: Blob }) {
+export function NewThumb({ blob }: { blob: Blob }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     const u = URL.createObjectURL(blob);
@@ -17,11 +17,21 @@ function NewThumb({ blob }: { blob: Blob }) {
   return url ? <img className="strip-preview" src={url} alt="" /> : null;
 }
 
-/** Photo manager for the item form: a scrollable strip plus Camera, Library and Find online. */
-export function PhotoStrip({ photos, onChange, onFindOnline }: {
+/** True for photos the user took or picked, as opposed to ones found online. */
+export const isOwnPhoto = (p: PhotoDraft) => (p.kind === 'new' ? p.source !== 'web' : p.photo.source !== 'web');
+
+/**
+ * Photo manager for the item form: a scrollable strip plus Camera, Library and Find online.
+ * Once there's a photo, "Find similar" (Google Lens) and "Fill in details" (Gemini) work from it:
+ * your own snapshot if there is one, otherwise the cover. Any photo's menu offers both too.
+ */
+export function PhotoStrip({ photos, onChange, onFindOnline, onFindSimilar, onDescribe, describing }: {
   photos: PhotoDraft[];
   onChange: (next: PhotoDraft[]) => void;
   onFindOnline: () => void;
+  onFindSimilar: (photo: PhotoDraft) => void;
+  onDescribe: (photo: PhotoDraft) => void;
+  describing: boolean;
 }) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
@@ -45,10 +55,14 @@ export function PhotoStrip({ photos, onChange, onFindOnline }: {
     onChange(next);
   }
 
+  const primary = photos.find(isOwnPhoto) ?? photos[0];
+
   const actions: SheetAction[] =
     selected === null
       ? []
       : [
+          { label: 'Find similar online', icon: 'search' as const, onSelect: () => onFindSimilar(photos[selected]) },
+          { label: 'Fill in details from photo', icon: 'sparkles' as const, onSelect: () => onDescribe(photos[selected]) },
           ...(selected > 0 ? [{ label: 'Make cover photo', icon: 'star' as const, onSelect: () => move(selected, 0) }] : []),
           ...(selected > 0 ? [{ label: 'Move left', icon: 'left' as const, onSelect: () => move(selected, selected - 1) }] : []),
           ...(selected < photos.length - 1 ? [{ label: 'Move right', icon: 'right' as const, onSelect: () => move(selected, selected + 1) }] : []),
@@ -88,6 +102,16 @@ export function PhotoStrip({ photos, onChange, onFindOnline }: {
         <button type="button" className="button button-secondary button-wide" disabled={full} onClick={onFindOnline}>
           <Icon name="globe" size={20} /> Find photos online
         </button>
+        {primary && (
+          <>
+            <button type="button" className="button button-secondary" disabled={full} onClick={() => onFindSimilar(primary)}>
+              <Icon name="search" size={20} /> Find similar
+            </button>
+            <button type="button" className="button button-secondary" disabled={describing} onClick={() => onDescribe(primary)}>
+              <Icon name="sparkles" size={20} /> {describing ? 'Reading…' : 'Fill in details'}
+            </button>
+          </>
+        )}
       </div>
       <input
         ref={cameraRef}

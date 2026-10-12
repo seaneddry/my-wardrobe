@@ -2,6 +2,17 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.5.0 — 2026-10-12
+
+Search by photo and fill in details from a photo.
+
+- **Find similar:** search online with a photo of your piece (Google Lens through SerpApi). Results favour shops in Malaysia and show prices when Google has them. Approve photos as before; nothing is attached until you save
+- New photos are sent through a temporary file in your own storage folder that is deleted straight after the search; saved photos use a 5-minute private link
+- **Fill in details:** Gemini reads a photo and fills in category, type, name, main and second colour, occasions, and the brand only when it's clearly readable. Answers are limited to your own lists
+- Runs automatically for the first photo you take or pick for a new piece; only empty fields are filled, never anything you've typed
+- Both actions are under the photo strip and in each photo's menu
+- `image-search` function v1.5.0 (new `lens` action); `stylist` function v1.5.0 (new `describe` action, shared Gemini handling). No database change
+
 ## 1.4.0 — 2026-09-30
 
 Hats in outfits, a bigger builder, and no seasons.

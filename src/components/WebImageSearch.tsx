@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchWebImage, hostOf, NotSetUpError, searchWebImages, type WebImage } from '../data/webImages';
+import { fetchWebImage, hostOf, NotSetUpError, searchByPhoto, searchWebImages, type PhotoInput, type WebImage } from '../data/webImages';
 import { errorMessage } from '../lib/format';
 import { Icon } from './Icon';
+import { Photo } from './Photo';
+import { NewThumb } from './PhotoStrip';
 import { Sheet } from './Sheet';
 
 export interface ApprovedImage {
@@ -12,18 +14,28 @@ export interface ApprovedImage {
 // Results are kept for the session so reopening the sheet doesn't use another search.
 const resultCache = new Map<string, WebImage[]>();
 
+/** A photo to search with (Google Lens). `key` identifies it for caching results. */
+export interface SearchPhoto {
+  key: string;
+  input: PhotoInput;
+}
+
 /**
- * Finds photos online for a piece. Nothing is added until the user opens a
- * result, checks it at full size, and taps "Use this photo".
+ * Finds photos online for a piece, by words (Google Images) or by photo (Google Lens).
+ * Nothing is added until the user opens a result, checks it at full size, and taps
+ * "Use this photo".
  */
-export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
+export function WebImageSearch({ open, onClose, initialQuery, photo, room, onAdd }: {
   open: boolean;
   onClose: () => void;
   initialQuery: string;
+  /** When set, the sheet opens searching by this photo instead of by words. */
+  photo?: SearchPhoto | null;
   /** How many more photos the piece can take. */
   room: number;
   onAdd: (images: ApprovedImage[]) => void;
 }) {
+  const [byPhoto, setByPhoto] = useState(false);
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<WebImage[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -43,6 +55,14 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
     setPreview(null);
     setError(null);
     setNotSetUp(false);
+    if (photo) {
+      setByPhoto(true);
+      const cached = resultCache.get(`photo:${photo.key}`);
+      setResults(cached ?? null);
+      if (!cached) runPhotoSearch(photo);
+      return;
+    }
+    setByPhoto(false);
     const cached = resultCache.get(initialQuery.trim().toLowerCase());
     setResults(cached ?? null);
     if (!cached && initialQuery.trim()) runSearch(initialQuery);
@@ -74,6 +94,29 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
     } finally {
       setSearching(false);
     }
+  }
+
+  async function runPhotoSearch(p: SearchPhoto) {
+    setSearching(true);
+    setError(null);
+    try {
+      const found = await searchByPhoto(p.input);
+      resultCache.set(`photo:${p.key}`, found);
+      setResults(found);
+    } catch (err) {
+      if (err instanceof NotSetUpError) setNotSetUp(true);
+      else setError(errorMessage(err));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function switchToWords() {
+    setByPhoto(false);
+    setError(null);
+    const cached = resultCache.get(query.trim().toLowerCase());
+    setResults(cached ?? null);
+    if (!cached && query.trim()) runSearch(query);
   }
 
   function submit(e: FormEvent) {
@@ -131,7 +174,7 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title={preview ? 'Check this photo' : 'Find photos online'} full footer={footer}>
+    <Sheet open={open} onClose={onClose} title={preview ? 'Check this photo' : byPhoto ? 'Find similar online' : 'Find photos online'} full footer={footer}>
       {preview ? (
         <div className="web-preview">
           <div className="web-preview-frame">
@@ -153,11 +196,26 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
               </a>
               {preview.width && preview.height ? `, ${preview.width} × ${preview.height}` : ''}
             </span>
+            {preview.price && <span className="web-preview-price">{preview.price}</span>}
           </div>
           <p className="web-hint">Only use it if it’s the same piece you own. A private copy is saved with your piece.</p>
         </div>
       ) : (
         <>
+          {byPhoto && photo ? (
+            <div className="lens-head">
+              <span className="lens-thumb">
+                {'path' in photo.input ? <Photo path={photo.input.path} alt="" /> : <NewThumb blob={photo.input.blob} />}
+              </span>
+              <span className="lens-text">
+                <strong>Items that look like your photo</strong>
+                <span>Results from Google Lens, favouring shops in Malaysia.</span>
+                <button type="button" className="lens-switch" onClick={switchToWords}>
+                  Search by words instead
+                </button>
+              </span>
+            </div>
+          ) : (
           <form className="web-search-form" onSubmit={submit}>
             <label className="search-field" style={{ height: 44 }}>
               <Icon name="search" size={18} />
@@ -174,6 +232,7 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
               Search
             </button>
           </form>
+          )}
 
           {notSetUp && (
             <div className="notice">
@@ -187,20 +246,22 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
           {searching && (
             <div className="empty" style={{ padding: 40 }}>
               <div className="spinner" />
-              <p>Looking for photos…</p>
+              <p>{byPhoto ? 'Looking for items like your photo…' : 'Looking for photos…'}</p>
             </div>
           )}
 
           {!searching && results && results.length === 0 && (
             <div className="empty" style={{ padding: 40 }}>
               <h2>No photos found</h2>
-              <p>Try fewer words, or add the brand name.</p>
+              <p>{byPhoto ? 'Try a clearer photo of the whole piece on a plain background, or search by words.' : 'Try fewer words, or add the brand name.'}</p>
             </div>
           )}
 
           {!searching && results && results.length > 0 && (
             <>
-              <p className="web-hint">Tap a photo to check it at full size before adding it.</p>
+              <p className="web-hint">
+                Tap a photo to check it at full size before adding it.{byPhoto ? ' Plain basics often show similar items rather than your exact one.' : ''}
+              </p>
               <div className="web-grid">
                 {results.map((r) => {
                   const picked = approved.has(r.original);
@@ -218,6 +279,7 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
                         </span>
                       )}
                       <img src={r.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                      {r.price && <span className="web-price">{r.price}</span>}
                     </button>
                   );
                 })}
@@ -225,7 +287,7 @@ export function WebImageSearch({ open, onClose, initialQuery, room, onAdd }: {
             </>
           )}
 
-          {!searching && !results && !notSetUp && !error && (
+          {!searching && !results && !notSetUp && !error && !byPhoto && (
             <p className="web-hint">
               Type the brand, name and colour, then search. Results come from Google Images; each search uses one of
               your 250 free searches a month.

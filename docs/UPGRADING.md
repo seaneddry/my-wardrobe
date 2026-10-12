@@ -7,6 +7,38 @@ Use this whenever you receive a new version of the code. Two rules:
 
 ---
 
+## 1.4.0 → 1.5.0 (find similar by photo, fill in details from a photo)
+
+No database change this time. You update the code and both server functions. It uses your existing SerpApi and Gemini keys; there are no new accounts or secrets.
+
+### Part A — Update the code
+
+1. Unzip the new `my-wardrobe.zip`.
+2. In GitHub Desktop, click **Repository → Show in Finder / Show in Explorer**, and turn on hidden files.
+3. Go *inside* the new unzipped folder, select all, copy. Go *inside* your project folder (the one with `.git`), paste, and choose **Replace** (tick **Apply to All** on Mac).
+4. In GitHub Desktop, type `v1.5.0` in **Summary**, click **Commit to main**, then **Push origin**.
+
+### Part B — Update both functions
+
+For each of `image-search` and `stylist`:
+
+1. Go to https://supabase.com/dashboard/project/_/functions and click the function.
+2. Open the **Code** tab, select all, delete, and paste the contents of `supabase/functions/<name>/index.ts` from the new zip.
+3. Click **Deploy**.
+
+### Part C — Try it
+
+1. Wait for the green tick at https://github.com/YOUR-USERNAME/my-wardrobe/actions, then hard-refresh (or swipe the app away on iPhone and reopen twice). **Settings → About** should show **1.5.0**.
+2. Tap **+**, then **Camera**, and photograph a piece. After a few seconds the category, name, type, colour and occasions fill in by themselves.
+3. Tap **Find similar** to see matching items online, with prices where Google knows them. Approve any you want, then **Save**.
+
+| What it uses | Allowance |
+|---|---|
+| **Find similar** | One SerpApi search (from your 250 a month), same as a text search |
+| **Fill in details** | One Gemini request. It runs automatically once for the first photo of a new piece, and again whenever you tap the button |
+
+---
+
 ## 1.3.x → 1.4.0 (hats in outfits, bigger builder, no seasons)
 
 This version adds `supabase/migrations/005_headwear.sql` and updates the `stylist` function one last time. After this, the stylist's instructions live in the app (`src/data/stylist.ts`), so future stylist changes won't need a function redeploy.

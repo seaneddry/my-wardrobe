@@ -1,11 +1,18 @@
-// My Wardrobe — Edge Function "stylist" (v1.4.0)
-// Suggests outfits from the user's own wardrobe using Google Gemini.
+// =============================================================================
+// My Wardrobe — Edge Function "stylist" (v1.5.0)
+//
+// Uses Google Gemini for two jobs, both for signed-in users only:
+//   { action: "suggest",  ... }  → 3 outfit ideas built only from the user's pieces
+//   { action: "describe", image, categories, colours, occasions }
+//                                → reads a photo of a piece and fills in its details
+//
 // Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional override).
 // Without GEMINI_MODEL, it asks Google which models this key can use and tries
 // Flash-Lite first (largest free allowance), then Flash. If one model is out of
 // quota or busy, it moves on to the next. One attempt per model, to save quota.
-// The stylist's instructions are sent by the app ("rules"), so they can change with an
-// app update; DEFAULT_RULES below is only used if the app doesn't send any.
+// Instructions are sent by the app ("rules"), so they can change with an app update;
+// the DEFAULT_ rules below are only used if the app doesn't send any.
+// =============================================================================
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -28,96 +35,8 @@ async function isSignedIn(req: Request): Promise<boolean> {
   return res.ok;
 }
 
-interface Piece {
-  ref: string;
-  slot: string;
-  category: string;
-  type?: string;
-  name?: string;
-  brand?: string;
-  colour?: string;
-  colour2?: string;
-  seasons?: string[];
-  occasions?: string[];
-  condition?: string;
-}
-
-interface Brief {
-  rules?: string;
-  occasion?: string;
-  mood?: string;
-  weather?: string;
-  notes?: string;
-  pieces: Piece[];
-}
-
-const SCHEMA = {
-  type: 'OBJECT',
-  properties: {
-    outfits: {
-      type: 'ARRAY',
-      items: {
-        type: 'OBJECT',
-        properties: {
-          title: { type: 'STRING', description: 'A short, evocative name for the outfit, 2 to 5 words.' },
-          pieces: { type: 'ARRAY', items: { type: 'STRING' }, description: 'The refs of the pieces used.' },
-          why: { type: 'STRING', description: 'One or two sentences on why it suits the brief.' },
-          tip: { type: 'STRING', description: 'One short styling tip.' },
-        },
-        required: ['title', 'pieces', 'why', 'tip'],
-      },
-    },
-  },
-  required: ['outfits'],
-};
-
-function describe(p: Piece): string {
-  const bits = [
-    `ref=${p.ref}`,
-    `slot=${p.slot}`,
-    p.name ? `name="${p.name}"` : '',
-    `category=${p.category}`,
-    p.type ? `type=${p.type}` : '',
-    p.brand ? `brand=${p.brand}` : '',
-    p.colour ? `colour=${p.colour}${p.colour2 ? `/${p.colour2}` : ''}` : '',
-    p.seasons?.length ? `seasons=${p.seasons.join('|')}` : '',
-    p.occasions?.length ? `occasions=${p.occasions.join('|')}` : '',
-    p.condition ? `condition=${p.condition}` : '',
-  ];
-  return '- ' + bits.filter(Boolean).join(', ');
-}
-
-const DEFAULT_RULES = `You are a friendly, practical personal stylist. Suggest exactly 3 distinct outfits for the brief below, built ONLY from the wardrobe pieces listed. Never invent pieces.
-
-Rules for each outfit:
-- Use either one "top" and one "bottom", or one "full" piece (like a dress or jumpsuit) instead of both.
-- Always include one "shoes" piece when any shoes are listed.
-- Optionally add one "head" piece (hat, cap), one "outer" piece, and up to two "accessory" pieces when they help the look.
-- Never use two pieces from the same slot, except accessories.
-- Respect the occasion's formality, the mood and the weather. Prefer pieces tagged with the occasion when that makes sense.
-- Think about colour harmony and proportion. Make the 3 outfits clearly different from each other.
-- Refer to pieces by their ref values only, in the "pieces" array.
-- In "why" and "tip", mention pieces by their name or colour and type, never by ref. Keep them short and specific.`;
-
-function buildPrompt(b: Brief): string {
-  const rules = typeof b.rules === 'string' && b.rules.trim().length > 50 ? b.rules.trim().slice(0, 6000) : DEFAULT_RULES;
-  const brief = [
-    b.occasion ? `Occasion: ${b.occasion}` : 'Occasion: any',
-    b.mood ? `Mood: ${b.mood}` : '',
-    b.weather ? `Weather: ${b.weather}` : '',
-    b.notes ? `Extra wishes from the wearer: ${b.notes}` : '',
-  ].filter(Boolean).join('\n');
-
-  return `${rules}
-
-Reply with JSON only, in this shape: {"outfits":[{"title":"...","pieces":["p1","p2"],"why":"...","tip":"..."}]}
-
-Brief:
-${brief}
-
-Wardrobe:
-${b.pieces.map(describe).join('\n')}`;
-}
+// deno-lint-ignore no-explicit-any
+type Part = Record<string, any>;
 
 /** Version number from a model name, e.g. "gemini-3.8-flash" → 3.8 */
 function versionOf(name: string): number {
@@ -125,11 +44,7 @@ function versionOf(name: string): number {
   return m ? parseFloat(m[1]) : 0;
 }
 
-/**
- * Asks Google which models this key can use. Order: newest Flash-Lite, newest Flash,
- * next Flash-Lite, next Flash… (stable before preview). Flash-Lite has the largest
- * free-tier allowance, and the two families have separate capacity and quotas.
- */
+/** Asks Google which models this key can use. Order: newest Flash-Lite, newest Flash, next of each… */
 async function discoverModels(key: string): Promise<string[]> {
   const res = await fetch(`${API}/models?pageSize=200`, { headers: { 'x-goog-api-key': key } });
   const data = await res.json().catch(() => ({}));
@@ -159,49 +74,47 @@ async function discoverModels(key: string): Promise<string[]> {
   return [...order, ...previews].slice(0, 6);
 }
 
-async function callGemini(model: string, key: string, prompt: string, withSchema: boolean): Promise<Response> {
-  const generationConfig: Record<string, unknown> = { responseMimeType: 'application/json', temperature: 0.9 };
-  if (withSchema) generationConfig.responseSchema = SCHEMA;
+async function callGemini(model: string, key: string, parts: Part[], schema: unknown | null, temperature: number): Promise<Response> {
+  const generationConfig: Record<string, unknown> = { responseMimeType: 'application/json', temperature };
+  if (schema) generationConfig.responseSchema = schema;
   return await fetch(`${API}/models/${model}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig }),
+    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig }),
     signal: AbortSignal.timeout(50000),
   });
 }
 
 /** One attempt per model. Only repeats (without the schema) if the model rejected the schema itself. */
-async function callOnce(model: string, key: string, prompt: string): Promise<{ res: Response; data: any }> {
-  let res = await callGemini(model, key, prompt, true);
+// deno-lint-ignore no-explicit-any
+async function callOnce(model: string, key: string, parts: Part[], schema: unknown, temperature: number): Promise<{ res: Response; data: any }> {
+  let res = await callGemini(model, key, parts, schema, temperature);
   let data = await res.json().catch(() => ({}));
   const msg: string = data?.error?.message ?? '';
-  if (res.status === 400 && /(schema|response_?mime|responseSchema|json)/i.test(msg)) {
-    res = await callGemini(model, key, prompt, false);
+  if (res.status === 400 && /(schema|response_?mime|responseSchema|json|enum)/i.test(msg)) {
+    res = await callGemini(model, key, parts, null, temperature);
     data = await res.json().catch(() => ({}));
   }
   return { res, data };
 }
 
-function parseOutfits(data: unknown): unknown[] {
+/** Pulls the JSON out of Gemini's reply. */
+function readJson(data: unknown): unknown {
   // deno-lint-ignore no-explicit-any
   const parts = (data as any)?.candidates?.[0]?.content?.parts ?? [];
   // deno-lint-ignore no-explicit-any
   const text = parts.filter((p: any) => !p.thought).map((p: any) => p.text ?? '').join('').trim()
     .replace(/^```(?:json)?\s*|\s*```$/g, '');
-  if (!text) throw new Error('The stylist returned an empty answer. Try again.');
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  const parsed = JSON.parse(start >= 0 && end > start ? text.slice(start, end + 1) : text);
-  return Array.isArray(parsed) ? parsed : parsed.outfits ?? [];
+  if (!text) throw new Error('The AI returned an empty answer. Try again.');
+  const start = text.search(/[[{]/);
+  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  return JSON.parse(start >= 0 && end > start ? text.slice(start, end + 1) : text);
 }
 
-async function suggest(b: Brief): Promise<Response> {
+/** Runs a request across the available models. Returns parsed JSON, or an error Response. */
+async function runGemini(parts: Part[], schema: unknown, temperature: number): Promise<{ value: unknown; model: string } | Response> {
   const key = Deno.env.get('GEMINI_API_KEY')?.trim();
   if (!key) return json({ error: 'not_configured' }, 503);
-  if (!Array.isArray(b.pieces) || b.pieces.length < 2) return json({ error: 'Add a few more pieces to your wardrobe first.' }, 400);
-
-  const pieces = b.pieces.slice(0, 400);
-  const prompt = buildPrompt({ ...b, pieces });
 
   let models: string[];
   const custom = Deno.env.get('GEMINI_MODEL')?.trim().replace(/^models\//, '');
@@ -219,11 +132,11 @@ async function suggest(b: Brief): Promise<Response> {
   const started = Date.now();
   for (const model of models) {
     if (Date.now() - started > 100000) break; // stay well inside the function's time limit
-    const { res, data } = await callOnce(model, key, prompt);
+    const { res, data } = await callOnce(model, key, parts, schema, temperature);
     const msg: string = data?.error?.message ?? '';
     if (res.ok) {
       try {
-        return json({ outfits: parseOutfits(data), model });
+        return { value: readJson(data), model };
       } catch (err) {
         problems.push(`${model}: ${err instanceof Error ? err.message : 'unreadable answer'}`);
         continue;
@@ -258,7 +171,147 @@ async function suggest(b: Brief): Promise<Response> {
   if (busy > 0 && busy + quota + noFreeTier === problems.length) {
     return json({ error: `Google’s AI is busy or out of free requests right now (${tried}). Try again in a few minutes.` }, 503);
   }
-  return json({ error: `The stylist couldn’t answer (${tried.slice(0, 300)}).` }, 502);
+  return json({ error: `The AI couldn’t answer (${tried.slice(0, 300)}).` }, 502);
+}
+
+const strings = (v: unknown, max = 200): string[] =>
+  Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => String(x).slice(0, 60)).slice(0, max) : [];
+
+const rulesOr = (v: unknown, fallback: string) =>
+  typeof v === 'string' && v.trim().length > 50 ? v.trim().slice(0, 6000) : fallback;
+
+// ---------------------------------------------------------------- Outfit ideas
+
+interface Piece {
+  ref: string;
+  slot: string;
+  category: string;
+  type?: string;
+  name?: string;
+  brand?: string;
+  colour?: string;
+  colour2?: string;
+  occasions?: string[];
+  condition?: string;
+}
+
+const OUTFITS_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    outfits: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          title: { type: 'STRING', description: 'A short, evocative name for the outfit, 2 to 5 words.' },
+          pieces: { type: 'ARRAY', items: { type: 'STRING' }, description: 'The refs of the pieces used.' },
+          why: { type: 'STRING', description: 'One or two sentences on why it suits the brief.' },
+          tip: { type: 'STRING', description: 'One short styling tip.' },
+        },
+        required: ['title', 'pieces', 'why', 'tip'],
+      },
+    },
+  },
+  required: ['outfits'],
+};
+
+const DEFAULT_SUGGEST_RULES = `You are a friendly, practical personal stylist. Suggest exactly 3 distinct outfits for the brief below, built ONLY from the wardrobe pieces listed. Never invent pieces.
+
+Rules for each outfit:
+- Use either one "top" and one "bottom", or one "full" piece (like a dress or jumpsuit) instead of both.
+- Always include one "shoes" piece when any shoes are listed.
+- Optionally add one "head" piece (hat, cap), one "outer" piece, and up to two "accessory" pieces when they help the look.
+- Never use two pieces from the same slot, except accessories.
+- Respect the occasion's formality, the mood and the weather. Prefer pieces tagged with the occasion when that makes sense.
+- Think about colour harmony and proportion. Make the 3 outfits clearly different from each other.
+- Refer to pieces by their ref values only, in the "pieces" array.
+- In "why" and "tip", mention pieces by their name or colour and type, never by ref. Keep them short and specific.`;
+
+function describePiece(p: Piece): string {
+  const bits = [
+    `ref=${p.ref}`,
+    `slot=${p.slot}`,
+    p.name ? `name="${p.name}"` : '',
+    `category=${p.category}`,
+    p.type ? `type=${p.type}` : '',
+    p.brand ? `brand=${p.brand}` : '',
+    p.colour ? `colour=${p.colour}${p.colour2 ? `/${p.colour2}` : ''}` : '',
+    p.occasions?.length ? `occasions=${p.occasions.join('|')}` : '',
+    p.condition ? `condition=${p.condition}` : '',
+  ];
+  return '- ' + bits.filter(Boolean).join(', ');
+}
+
+// deno-lint-ignore no-explicit-any
+async function suggest(b: any): Promise<Response> {
+  const pieces: Piece[] = Array.isArray(b.pieces) ? b.pieces.slice(0, 400) : [];
+  if (pieces.length < 2) return json({ error: 'Add a few more pieces to your wardrobe first.' }, 400);
+  const brief = [
+    b.occasion ? `Occasion: ${b.occasion}` : 'Occasion: any',
+    b.mood ? `Mood: ${b.mood}` : '',
+    b.weather ? `Weather: ${b.weather}` : '',
+    b.notes ? `Extra wishes from the wearer: ${String(b.notes).slice(0, 300)}` : '',
+  ].filter(Boolean).join('\n');
+  const prompt = `${rulesOr(b.rules, DEFAULT_SUGGEST_RULES)}
+
+Reply with JSON only, in this shape: {"outfits":[{"title":"...","pieces":["p1","p2"],"why":"...","tip":"..."}]}
+
+Brief:
+${brief}
+
+Wardrobe:
+${pieces.map(describePiece).join('\n')}`;
+
+  const out = await runGemini([{ text: prompt }], OUTFITS_SCHEMA, 0.9);
+  if (out instanceof Response) return out;
+  // deno-lint-ignore no-explicit-any
+  const v = out.value as any;
+  return json({ outfits: Array.isArray(v) ? v : v?.outfits ?? [], model: out.model });
+}
+
+// ------------------------------------------------------- Reading a piece's photo
+
+const DEFAULT_DESCRIBE_RULES = `You are cataloguing one piece of clothing from a photo for a personal wardrobe app. Look only at the main garment or item (ignore the background, hangers, furniture and any person). Fill in: category (from the allowed list), item_type (a short specific type such as "Oxford shirt" or "Sneakers"), name (2 to 4 plain words, colour then type, e.g. "Navy oxford shirt"), colour (main colour, from the allowed list), secondary_colour (from the allowed list, or "None"), brand (only if a brand name or logo is clearly readable, otherwise ""), and occasions (1 to 3 from the allowed list that suit the piece).`;
+
+// deno-lint-ignore no-explicit-any
+async function describe(b: any): Promise<Response> {
+  const img = b.image;
+  if (!img || typeof img.data !== 'string' || typeof img.mime !== 'string' || !img.mime.startsWith('image/')) {
+    return json({ error: 'No photo was sent.' }, 400);
+  }
+  if (img.data.length > 2_000_000) return json({ error: 'That photo is too large to read.' }, 413);
+
+  const categories = strings(b.categories);
+  const colours = strings(b.colours);
+  const occasions = strings(b.occasions);
+  const withEnum = (list: string[], extra: string[] = []) =>
+    list.length ? { type: 'STRING', enum: [...list, ...extra] } : { type: 'STRING' };
+
+  const schema = {
+    type: 'OBJECT',
+    properties: {
+      category: withEnum(categories),
+      item_type: { type: 'STRING' },
+      name: { type: 'STRING' },
+      colour: withEnum(colours),
+      secondary_colour: withEnum(colours, ['None']),
+      brand: { type: 'STRING' },
+      occasions: { type: 'ARRAY', items: withEnum(occasions) },
+    },
+    required: ['category', 'item_type', 'name', 'colour'],
+  };
+
+  const prompt = `${rulesOr(b.rules, DEFAULT_DESCRIBE_RULES)}
+
+Allowed categories: ${categories.join(', ') || 'any'}
+Allowed colours: ${colours.join(', ') || 'any'}
+Allowed occasions: ${occasions.join(', ') || 'any'}
+
+Reply with JSON only, in this shape: {"category":"...","item_type":"...","name":"...","colour":"...","secondary_colour":"...","brand":"...","occasions":["..."]}`;
+
+  const out = await runGemini([{ text: prompt }, { inline_data: { mime_type: img.mime, data: img.data } }], schema, 0.2);
+  if (out instanceof Response) return out;
+  return json({ details: out.value, model: out.model });
 }
 
 Deno.serve(async (req) => {
@@ -267,7 +320,8 @@ Deno.serve(async (req) => {
   try {
     if (!(await isSignedIn(req))) return json({ error: 'Please sign in again.' }, 401);
     const body = await req.json().catch(() => ({}));
-    if (body.action === 'suggest') return await suggest(body as Brief);
+    if (body.action === 'suggest') return await suggest(body);
+    if (body.action === 'describe') return await describe(body);
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : 'Something went wrong.' }, 500);
