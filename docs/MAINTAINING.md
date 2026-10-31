@@ -72,7 +72,9 @@ src/
     manage/                 The Manage section (lists and custom fields)
     outfits/                Outfits list, outfit page, and the builder canvas
   components/               Reusable pieces (nav bar, tab bar, sheets, carousel, photo strip, online search)
-  lib/                      Small helpers (filters, outfits and shuffle, formatting, image resizing)
+  lib/                      Small helpers (filters, outfits and shuffle, selling, formatting, image resizing)
+  styles.css                Base design system and components
+  glass.css                 Liquid Glass theme (same as Garage), loaded last; re-skins styles.css
 supabase/migrations/        Database scripts, run in order
 supabase/functions/         Edge Functions, deployed from the Supabase dashboard
 docs/                       Setup, upgrading, maintenance, backlog
@@ -81,6 +83,10 @@ docs/                       Setup, upgrading, maintenance, backlog
 The screens never call Supabase directly. They go through `repository.ts`. To change where data lives, such as adding offline sync later, write a new implementation of that interface and switch to it in `state/data.tsx`. The screens don't need to change.
 
 ---
+
+## Selling pieces
+
+A piece's `status` is one of `active`, `archived`, `for_sale` or `sold` (`src/data/types.ts`). Only `active` pieces go to the outfit builder, Shuffle and the AI stylist (`src/lib/outfits.ts`, `src/data/stylist.ts`), so anything on sale or sold is left out automatically. Sale helpers and labels are in `src/lib/sale.ts`. The two sale statuses are fixed in code rather than a Manage list, because the app's behaviour depends on them.
 
 ## Changing how the stylist behaves
 

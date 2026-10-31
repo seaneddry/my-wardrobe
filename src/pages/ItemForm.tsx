@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Chips } from '../components/Chips';
 import { CustomFieldRow, CustomMultiselect } from '../components/CustomField';
 import { Group } from '../components/Group';
@@ -16,6 +16,7 @@ import { emptyItemFields, type AttributeValue, type Item, type ItemFields } from
 import { buildQuery } from '../data/webImages';
 import { errorMessage } from '../lib/format';
 import { newId } from '../lib/id';
+import { SALE_LABELS, isSaleStatus, parsePrice, today, type SaleStatus } from '../lib/sale';
 import { useData } from '../state/data';
 
 function fieldsFrom(item: Item): ItemFields {
@@ -31,7 +32,10 @@ function distinct(values: Array<string | null>): string[] {
 export function ItemForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { items, loading } = useData();
+  // "/sale/add" adds a piece straight to the For Sale section.
+  const forSale = pathname === '/sale/add';
   const existing = id ? items.find((i) => i.id === id) : undefined;
 
   if (id && !existing) {
@@ -49,16 +53,20 @@ export function ItemForm() {
     );
   }
   // Keyed so the form starts fresh for each piece.
-  return <ItemFormBody key={id ?? 'new'} existing={existing} />;
+  return <ItemFormBody key={id ?? (forSale ? 'new-sale' : 'new')} existing={existing} forSale={forSale} />;
 }
 
-function ItemFormBody({ existing }: { existing?: Item }) {
+function ItemFormBody({ existing, forSale = false }: { existing?: Item; forSale?: boolean }) {
   const navigate = useNavigate();
   const toast = useToast();
   const { items, fields: customFields, lookups, saveItem } = useData();
 
-  const [form, setForm] = useState<ItemFields>(() => (existing ? fieldsFrom(existing) : emptyItemFields()));
+  const [form, setForm] = useState<ItemFields>(() =>
+    existing ? fieldsFrom(existing) : forSale ? { ...emptyItemFields(), status: 'for_sale', listed_at: today() } : emptyItemFields(),
+  );
   const [priceText, setPriceText] = useState(existing?.price != null ? String(existing.price) : '');
+  const [salePriceText, setSalePriceText] = useState(existing?.sale_price != null ? String(existing.sale_price) : '');
+  const selling = isSaleStatus(form.status);
   const [photos, setPhotos] = useState<PhotoDraft[]>(() =>
     (existing?.photos ?? []).map((photo) => ({ kind: 'stored', key: photo.path, photo })),
   );
@@ -166,6 +174,8 @@ function ItemFormBody({ existing }: { existing?: Item }) {
     if (!form.category) return fail('Choose a category before saving.');
     const price = priceText.trim() === '' ? null : Number(priceText.replace(',', '.'));
     if (price !== null && (Number.isNaN(price) || price < 0)) return fail('Price must be a number, for example 49.90.');
+    const salePrice = parsePrice(salePriceText);
+    if (selling && salePrice === undefined) return fail('Asking price must be a number, for example 45 or 45.50.');
     const badNumber = customFields.find((f) => f.field_type === 'number' && typeof form.attributes[f.key] === 'string');
     if (badNumber) return fail(`${badNumber.label} must be a number.`);
 
@@ -181,10 +191,17 @@ function ItemFormBody({ existing }: { existing?: Item }) {
           brand: form.brand?.trim() || null,
           notes: form.notes?.trim() || null,
           price,
+          ...(selling
+            ? {
+                sale_price: salePrice ?? null,
+                listed_at: form.listed_at ?? today(),
+                sold_at: form.status === 'sold' ? (form.sold_at ?? today()) : null,
+              }
+            : {}),
         },
         photos,
       });
-      toast(existing ? 'Changes saved' : 'Piece added');
+      toast(existing ? 'Changes saved' : selling ? 'Added to For Sale' : 'Piece added');
       navigate(`/item/${saved.id}`, { replace: true, viewTransition: true });
     } catch (err) {
       fail(errorMessage(err));
@@ -207,7 +224,7 @@ function ItemFormBody({ existing }: { existing?: Item }) {
   return (
     <div className="screen screen-form">
       <NavBar
-        title={existing ? 'Edit piece' : 'New piece'}
+        title={existing ? 'Edit piece' : forSale ? 'Piece to sell' : 'New piece'}
         left={
           <button type="button" className="nav-button" onClick={cancel} disabled={busy}>
             Cancel
@@ -273,6 +290,34 @@ function ItemFormBody({ existing }: { existing?: Item }) {
             </p>
           )}
         </Group>
+
+        {selling && (
+          <Group header="Sale" footer={existing ? undefined : 'It stays out of your outfits and the stylist.'}>
+            <label className="row-input" htmlFor="sale-price-input">
+              <span className="row-label">Asking</span>
+              <input
+                id="sale-price-input"
+                type="text"
+                inputMode="decimal"
+                placeholder="RM 0"
+                value={salePriceText}
+                onChange={(e) => {
+                  setSalePriceText(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            </label>
+            <div className="group-pad" style={{ boxShadow: 'inset 0 0.5px 0 var(--separator)' }}>
+              <div className="segmented" role="group" aria-label="Sale status">
+                {(Object.keys(SALE_LABELS) as SaleStatus[]).map((st) => (
+                  <button key={st} type="button" aria-pressed={form.status === st} onClick={() => update('status', st)}>
+                    {SALE_LABELS[st]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Group>
+        )}
 
         <Group header="Category" pad>
           <Chips
@@ -401,7 +446,7 @@ function ItemFormBody({ existing }: { existing?: Item }) {
         </Group>
 
         <button type="submit" className="button button-primary button-block" disabled={busy}>
-          {busy ? (newCount ? 'Uploading photos…' : 'Saving…') : existing ? 'Save changes' : 'Add to wardrobe'}
+          {busy ? (newCount ? 'Uploading photos…' : 'Saving…') : existing ? 'Save changes' : selling ? 'Add to For Sale' : 'Add to wardrobe'}
         </button>
       </form>
 

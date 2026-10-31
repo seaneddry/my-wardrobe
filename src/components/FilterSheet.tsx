@@ -83,6 +83,7 @@ export function FilterSheet({ open, filters, onChange, onClose, resultCount }: {
           allowDeselect={false}
           options={[
             { value: 'active', label: 'In wardrobe' },
+            { value: 'sale', label: 'On sale and sold' },
             { value: 'archived', label: 'Archived' },
             { value: 'all', label: 'Everything' },
           ]}

@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'My Wardrobe',
         short_name: 'Wardrobe',
         description: 'Catalogue your clothes and decide what to wear.',
-        theme_color: '#f2f2f7',
-        background_color: '#f2f2f7',
+        theme_color: '#f2f2f4',
+        background_color: '#f2f2f4',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

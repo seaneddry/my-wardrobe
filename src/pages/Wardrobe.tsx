@@ -35,7 +35,7 @@ export function Wardrobe() {
   }, []);
 
   const visible = useMemo(() => applyFilters(items, filters), [items, filters]);
-  const inWardrobe = items.filter((i) => i.status === 'active').length;
+  const inWardrobe = items.filter((i) => i.status === 'active' || i.status === 'for_sale').length;
   const sheetCount = sheetFilterCount(filters);
   const narrowed = filters.q || filters.category || sheetCount > 0;
 

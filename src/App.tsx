@@ -4,6 +4,7 @@ import { TabBar } from './components/TabBar';
 import { ToastProvider } from './components/Toast';
 import { config } from './config';
 import { ConfigMissing } from './pages/ConfigMissing';
+import { ForSale } from './pages/ForSale';
 import { ItemDetail } from './pages/ItemDetail';
 import { ItemForm } from './pages/ItemForm';
 import { Login } from './pages/Login';
@@ -34,7 +35,7 @@ function ErrorBanner() {
 
 function Shell() {
   const location = useLocation();
-  const isForm = location.pathname === '/add' || location.pathname === '/outfits/new' || location.pathname.endsWith('/edit');
+  const isForm = location.pathname === '/add' || location.pathname === '/sale/add' || location.pathname === '/outfits/new' || location.pathname.endsWith('/edit');
 
   // Each screen starts at the top, except the wardrobe, which restores its own position.
   useEffect(() => {
@@ -64,6 +65,8 @@ const router = createHashRouter([
       { path: '/outfits/:id', element: <OutfitDetail /> },
       { path: '/outfits/:id/edit', element: <OutfitBuilder /> },
       { path: '/stylist', element: <Stylist /> },
+      { path: '/sale', element: <ForSale /> },
+      { path: '/sale/add', element: <ItemForm /> },
       { path: '/settings', element: <Settings /> },
       {
         path: '/manage',

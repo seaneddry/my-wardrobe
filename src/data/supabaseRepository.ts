@@ -16,12 +16,16 @@ function normaliseItem(row: Record<string, unknown>): Item {
     occasions: item.occasions ?? [],
     attributes: item.attributes ?? {},
     price: item.price === null || item.price === undefined ? null : Number(item.price),
+    // Older rows and cached data (before migration 006) have no sale columns.
+    sale_price: item.sale_price === null || item.sale_price === undefined ? null : Number(item.sale_price),
+    listed_at: item.listed_at ?? null,
+    sold_at: item.sold_at ?? null,
   };
 }
 
 function fail(action: string, error: { message: string; code?: string }): never {
   if (error.code === '23505') throw new Error(`${action}: that name is already in use.`);
-  if (error.code === 'PGRST202' || error.code === 'PGRST204' || /could not find the (function|'photos' column)/i.test(error.message)) {
+  if (error.code === 'PGRST202' || error.code === 'PGRST204' || /could not find the (function|'(photos|sale_price|listed_at|sold_at)' column)/i.test(error.message)) {
     throw new Error(`${action}: the database needs updating. Run the latest migration (see docs/UPGRADING.md).`);
   }
   throw new Error(`${action}: ${error.message}`);
@@ -92,6 +96,12 @@ export function createSupabaseRepository(userId: string): WardrobeRepository {
     async setItemStatus(item, status) {
       const { data, error } = await supabase.from('items').update({ status }).eq('id', item.id).select().single();
       if (error) fail("Couldn't update this piece", error);
+      return normaliseItem(data);
+    },
+
+    async updateSale(item, patch) {
+      const { data, error } = await supabase.from('items').update(patch).eq('id', item.id).select().single();
+      if (error) fail("Couldn't update the sale", error);
       return normaliseItem(data);
     },
 

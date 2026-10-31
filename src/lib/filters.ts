@@ -8,7 +8,8 @@ export interface Filters {
   colours: string[];
   sizes: string[];
   occasions: string[];
-  status: 'active' | 'archived' | 'all';
+  /** active: everything you have or sold (not archived). sale: on sale or sold. */
+  status: 'active' | 'sale' | 'archived' | 'all';
   sort: SortKey;
 }
 
@@ -79,7 +80,9 @@ const overlaps = (a: string[], b: string[]) => a.some((x) => b.includes(x));
 export function applyFilters(items: Item[], f: Filters): Item[] {
   const terms = f.q.toLowerCase().split(/\s+/).filter(Boolean);
   const result = items.filter((item) => {
-    if (f.status !== 'all' && item.status !== f.status) return false;
+    if (f.status === 'active' && item.status === 'archived') return false;
+    if (f.status === 'sale' && item.status !== 'for_sale' && item.status !== 'sold') return false;
+    if (f.status === 'archived' && item.status !== 'archived') return false;
     if (f.category && item.category !== f.category) return false;
     if (f.colours.length && !f.colours.some((c) => c === item.colour || c === item.secondary_colour)) return false;
     if (f.sizes.length && !(item.size && f.sizes.includes(item.size))) return false;

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { config } from '../config';
 import { DEFAULT_LOOKUPS } from '../data/defaults';
-import type { NewField, SaveItemInput, WardrobeRepository } from '../data/repository';
+import type { NewField, SalePatch, SaveItemInput, WardrobeRepository } from '../data/repository';
 import { createSupabaseRepository } from '../data/supabaseRepository';
 import { LOOKUP_LISTS, type FieldDefinition, type Item, type Lookup, type LookupList, type Outfit, type OutfitFields } from '../data/types';
 import { errorMessage } from '../lib/format';
@@ -48,6 +48,7 @@ interface DataState {
   saveItem(input: SaveItemInput): Promise<Item>;
   deleteItem(item: Item): Promise<void>;
   setItemStatus(item: Item, status: Item['status']): Promise<Item>;
+  updateSale(item: Item, patch: SalePatch): Promise<Item>;
   clearError(): void;
 }
 
@@ -206,6 +207,11 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     },
     async setItemStatus(item, status) {
       const saved = await repo.setItemStatus(item, status);
+      persist(items.map((i) => (i.id === saved.id ? saved : i)));
+      return saved;
+    },
+    async updateSale(item, patch) {
+      const saved = await repo.updateSale(item, patch);
       persist(items.map((i) => (i.id === saved.id ? saved : i)));
       return saved;
     },

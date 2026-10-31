@@ -2,6 +2,19 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.6.0 — 2026-10-31
+
+Sell pieces you no longer want, and a new Liquid Glass look.
+
+- **For Sale** tab: pieces On sale and Sold, each with an asking price, listed date and sold date
+- **Add** (or the round + button while on For Sale) adds a piece straight to For Sale, with photos, online photo search and fill-in-from-photo as usual
+- **Sell something from my wardrobe** picks a piece you already have; **Sell this piece** on any piece's page does the same
+- On a piece's page: **Mark as sold**, **Put back on sale**, **Take off sale**, and **Edit** for the price
+- On-sale and sold pieces stay in the wardrobe with an **On sale** / **Sold** badge, but are never used by the outfit builder, Shuffle or the AI stylist. Filter: **Show → On sale and sold**
+- Sale statuses (On sale, Sold) are fixed, not a Manage list, because the app relies on what they mean
+- **Liquid Glass "Smoke monochrome"** theme, the same as Garage: soft glow background, frosted glass panels, floating capsule tab bar with a round + button, rounder buttons. Lives in `src/glass.css`; remove its import in `src/main.tsx` to go back
+- Database migration 006 (two new statuses, `sale_price`, `listed_at`, `sold_at`). Existing pieces are unchanged
+
 ## 1.5.0 — 2026-10-12
 
 Search by photo and fill in details from a photo.

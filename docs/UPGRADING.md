@@ -7,6 +7,16 @@ Use this whenever you receive a new version of the code. Two rules:
 
 ---
 
+## 1.5.0 → 1.6.0 (For Sale section, Liquid Glass look)
+
+1. Run `supabase/migrations/006_for_sale.sql` in the SQL Editor (Supabase → SQL Editor → New query → paste → Run). It only adds things: two new statuses and three new columns. Existing pieces keep working.
+2. Push the code. **Settings → About** should show **1.6.0** and database **006**.
+3. Open the **For Sale** tab and tap **Add**, or open any piece and tap **Sell this piece**.
+
+No function changes and no new keys.
+
+---
+
 ## 1.4.0 → 1.5.0 (find similar by photo, fill in details from a photo)
 
 No database change this time. You update the code and both server functions. It uses your existing SerpApi and Gemini keys; there are no new accounts or secrets.

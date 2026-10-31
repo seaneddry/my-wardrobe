@@ -49,7 +49,12 @@ export interface FieldDefinition {
 
 export type AttributeValue = string | number | boolean | string[] | null;
 
-export type ItemStatus = 'active' | 'archived';
+/**
+ * active: in the wardrobe. archived: hidden, kept on record.
+ * for_sale: listed for sale (still owned). sold: sold, kept with a Sold badge.
+ * Only "active" pieces are used by the outfit builder, Shuffle and the AI stylist.
+ */
+export type ItemStatus = 'active' | 'archived' | 'for_sale' | 'sold';
 
 export type PhotoSource = 'camera' | 'library' | 'web';
 
@@ -82,6 +87,12 @@ export interface Item {
   photos: StoredPhoto[];
   attributes: Record<string, AttributeValue>;
   status: ItemStatus;
+  /** Asking price when for sale (purchase price is `price`). */
+  sale_price: number | null;
+  /** Date listed for sale (YYYY-MM-DD). */
+  listed_at: string | null;
+  /** Date sold (YYYY-MM-DD). */
+  sold_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +117,9 @@ export function emptyItemFields(): ItemFields {
     notes: null,
     attributes: {},
     status: 'active',
+    sale_price: null,
+    listed_at: null,
+    sold_at: null,
   };
 }
 

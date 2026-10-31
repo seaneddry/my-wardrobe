@@ -5,10 +5,12 @@ import { formatAttribute } from '../components/CustomField';
 import { Group } from '../components/Group';
 import { Icon } from '../components/Icon';
 import { NavBar } from '../components/NavBar';
+import { SaleSheet } from '../components/SaleSheet';
 import { Swatch } from '../components/Swatch';
 import { useToast } from '../components/Toast';
 import { itemTitle } from '../data/types';
 import { errorMessage, formatDate, formatPrice } from '../lib/format';
+import { SALE_LABELS, formatMoney, isSaleStatus, today } from '../lib/sale';
 import { useData } from '../state/data';
 
 export function ItemDetail() {
@@ -16,9 +18,10 @@ export function ItemDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const { items, fields, colourHex, setItemStatus, deleteItem, loading } = useData();
+  const { items, fields, colourHex, setItemStatus, updateSale, deleteItem, loading } = useData();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saleOpen, setSaleOpen] = useState(false);
   const item = items.find((i) => i.id === id);
 
   // Opened directly (no history in this app): go to the wardrobe instead.
@@ -120,6 +123,46 @@ export function ItemDetail() {
       <main className="page detail-body stack" style={{ paddingTop: 16 }}>
         {current.status === 'archived' && <p className="notice">Archived. It’s hidden from your wardrobe but kept on record.</p>}
 
+        {isSaleStatus(current.status) && (
+          <section className="sale-card">
+            <div className="sale-card-head">
+              <span className={`status-badge${current.status === 'sold' ? ' is-sold' : ''}`}>{SALE_LABELS[current.status]}</span>
+              <button type="button" className="nav-button" onClick={() => setSaleOpen(true)} disabled={busy}>
+                Edit
+              </button>
+            </div>
+            <div className="sale-card-price">{current.sale_price == null ? 'No price set' : formatMoney(current.sale_price)}</div>
+            <div className="sale-card-sub">
+              {[
+                current.listed_at && `Listed ${formatDate(current.listed_at)}`,
+                current.status === 'sold' && current.sold_at && `Sold ${formatDate(current.sold_at)}`,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'Not used in outfits or by the stylist'}
+            </div>
+            {current.status === 'for_sale' ? (
+              <button
+                type="button"
+                className="button button-primary button-block"
+                disabled={busy}
+                onClick={() => run(() => updateSale(current, { status: 'sold', sold_at: today() }), 'Marked as sold')}
+              >
+                <Icon name="check" size={18} weight={2.4} />
+                Mark as sold
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button button-secondary button-block"
+                disabled={busy}
+                onClick={() => run(() => updateSale(current, { status: 'for_sale', sold_at: null }), 'Back on sale')}
+              >
+                Put back on sale
+              </button>
+            )}
+          </section>
+        )}
+
         {facts.length > 0 && (
           <div className="facts" style={{ gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))` }}>
             {facts.map(([k, v]) => (
@@ -155,6 +198,32 @@ export function ItemDetail() {
         )}
 
         <Group>
+          {current.status === 'active' && (
+            <button type="button" className="row" disabled={busy} onClick={() => setSaleOpen(true)}>
+              <span className="row-icon">
+                <Icon name="tag" size={18} />
+              </span>
+              <span className="row-label">Sell this piece</span>
+            </button>
+          )}
+          {isSaleStatus(current.status) && (
+            <button
+              type="button"
+              className="row"
+              disabled={busy}
+              onClick={() =>
+                run(
+                  () => updateSale(current, { status: 'active', sold_at: null, listed_at: null }),
+                  current.status === 'sold' ? 'Back in your wardrobe' : 'Taken off sale',
+                )
+              }
+            >
+              <span className="row-icon">
+                <Icon name="restore" size={18} />
+              </span>
+              <span className="row-label">{current.status === 'sold' ? 'Back to wardrobe (not sold)' : 'Take off sale'}</span>
+            </button>
+          )}
           <button
             type="button"
             className="row"
@@ -178,6 +247,8 @@ export function ItemDetail() {
             <span className="row-label">Delete piece</span>
           </button>
         </Group>
+
+        <SaleSheet item={current} open={saleOpen} onClose={() => setSaleOpen(false)} />
 
         <p className="footnote">Added {new Date(current.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</p>
       </main>

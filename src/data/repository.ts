@@ -10,6 +10,8 @@ export interface WardrobeRepository {
   saveItem(input: SaveItemInput): Promise<Item>;
   deleteItem(item: Item): Promise<void>;
   setItemStatus(item: Item, status: Item['status']): Promise<Item>;
+  /** Changes a piece's sale details: status, asking price, listed and sold dates. */
+  updateSale(item: Item, patch: SalePatch): Promise<Item>;
 
   listLookups(): Promise<Lookup[]>;
   seedLookups(rows: Array<{ list: LookupList; value: string; sort_order: number; meta: Record<string, unknown> }>): Promise<void>;
@@ -36,6 +38,8 @@ export interface WardrobeRepository {
 
   schemaVersion(): Promise<string | null>;
 }
+
+export type SalePatch = Partial<Pick<Item, 'status' | 'sale_price' | 'listed_at' | 'sold_at'>>;
 
 export interface NewField {
   key: string;

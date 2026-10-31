@@ -32,7 +32,20 @@ Move finished items into `CHANGELOG.md`.
 - [x] Find similar items online from a photo (Google Lens)
 - [x] Fill in a piece's details from a photo (Gemini)
 
-## Next: v1.6 — Wear log and stats
+## Done in v1.6
+
+- [x] For Sale section: On sale / Sold with asking price, add directly or from the wardrobe
+- [x] Sold and on-sale pieces kept out of the builder and stylist, shown with badges
+- [x] Liquid Glass theme matching Garage
+
+## Later for selling (not started)
+
+- [ ] Sold price (when it differs from the asking price) and money recovered
+- [ ] Where it's listed (Carousell, Facebook Marketplace) as a Manage list
+- [ ] "Copy listing text" for a ready-to-paste caption
+- [ ] Reserved status
+
+## Next: v1.7 — Wear log and stats
 
 - [ ] "Wore this today" on a piece and on a saved outfit
 - [ ] Stats: most worn, least worn, not worn in 90+ days, cost per wear

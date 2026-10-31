@@ -3037,3 +3037,254 @@ select.input:disabled {
   font-size: 17px;
   font-weight: 700;
 }
+
+/* ============================================================== For Sale (v1.6) */
+
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+.segmented-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.sale-tabs {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 4px 16px 14px;
+}
+
+/* Rounded pill in the nav bar ("+ Add"), as in Garage. */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  margin-right: 6px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.nav-pill:active {
+  transform: scale(0.96);
+}
+
+/* A single tappable row card. */
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+}
+.quick-link > svg {
+  color: var(--ink-3);
+  flex: none;
+}
+.quick-link:active {
+  background: var(--surface-2);
+}
+
+.sale-row {
+  min-height: 84px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.sale-row .card-brand {
+  display: block;
+}
+.sale-thumb {
+  position: relative;
+  flex: none;
+  width: 60px;
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--photo-bg);
+}
+.sale-thumb .photo {
+  height: 100%;
+}
+.sale-thumb-badge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 0;
+  background: rgb(0 0 0 / 0.62);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.sale-row:has(.sale-thumb-badge) .sale-thumb .photo {
+  filter: grayscale(0.6);
+}
+.sale-price {
+  flex: none;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.sale-price.is-empty {
+  color: var(--ink-3);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* "On sale" / "Sold" badge on cards and the piece page. */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.status-badge.is-sold {
+  background: var(--fill);
+  color: var(--ink-2);
+}
+.card-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  height: 22px;
+  padding: 0 9px;
+  font-size: 11px;
+  background: rgb(11 11 15 / 0.82);
+  color: #fff;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.card-status.is-sold {
+  background: rgb(255 255 255 / 0.85);
+  color: #0b0b0f;
+}
+.card-sold .card-photo .photo {
+  filter: grayscale(0.7);
+  opacity: 0.75;
+}
+
+.sale-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.sale-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sale-card-head .nav-button {
+  margin-right: -8px;
+}
+.sale-card-price {
+  margin-top: 4px;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sale-card-sub {
+  margin-bottom: 10px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.sale-card .button {
+  gap: 8px;
+}
+
+.sale-sheet-piece {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sale-sheet-piece .piece-thumb {
+  width: 48px;
+}
+.sale-price-field {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.sale-price-currency {
+  color: var(--ink-2);
+  font-size: 22px;
+  font-weight: 600;
+}
+.sale-price-field input {
+  width: 6ch;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.sale-hint {
+  margin: 8px 4px 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
 import './styles.css';
+import './glass.css';
 
 // Keeps the installed app up to date: new versions load on the next launch.
 registerSW({ immediate: true });
