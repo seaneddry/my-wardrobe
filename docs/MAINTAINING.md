@@ -41,6 +41,8 @@ Use **Settings → Manage lists and fields** in the app. It works best on a comp
 
 ## Database changes (migrations)
 
+The app's tables live in the shared **expense-tracker** Supabase project, alongside the Expense Tracker and Garage. This keeps a single free project active. Run wardrobe migrations there. The old `my-wardrobe` project is a stale, paused copy, so don't use it.
+
 When a feature needs a new table or column:
 
 1. Add a new file in `supabase/migrations/`, numbered in order: `003_outfits.sql`, `004_…`. **Never edit a migration that has already been run**; fix it with a new one instead.
