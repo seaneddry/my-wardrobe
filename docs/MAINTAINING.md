@@ -88,7 +88,7 @@ The screens never call Supabase directly. They go through `repository.ts`. To ch
 
 ## Selling pieces
 
-A piece's `status` is one of `active`, `archived`, `for_sale` or `sold` (`src/data/types.ts`). Only `active` pieces go to the outfit builder, Shuffle and the AI stylist (`src/lib/outfits.ts`, `src/data/stylist.ts`), so anything on sale or sold is left out automatically. Sale helpers and labels are in `src/lib/sale.ts`. The two sale statuses are fixed in code rather than a Manage list, because the app's behaviour depends on them.
+A piece's `status` is one of `active`, `archived`, `for_sale` or `sold` (`src/data/types.ts`). Only `active` pieces go to the outfit builder, Shuffle and the AI stylist (`src/lib/outfits.ts`, `src/data/stylist.ts`), so anything on sale or sold is left out automatically. Sale helpers and labels are in `src/lib/sale.ts`; the For Sale screen's search, sort and filters are in `src/lib/saleFilters.ts` and `src/components/SaleFilterSheet.tsx`. The two sale statuses are fixed in code rather than a Manage list, because the app's behaviour depends on them.
 
 ## Changing how the stylist behaves
 

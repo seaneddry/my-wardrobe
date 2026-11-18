@@ -2,6 +2,15 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.6.2 — 2026-11-19
+
+- For Sale: **search** by name, brand or type
+- For Sale: **category pills** (only categories that have sale pieces)
+- For Sale: **Sort and filter** button. Sort by newest, oldest, price high to low, price low to high, or name. Filter by price (has a price / no price yet), colour and size
+- The totals add up only the pieces that match, and show "1 of 3" while anything is narrowing the list
+- Search, sort and filters apply to both On sale and Sold, and are kept until you close the app
+- No database change
+
 ## 1.6.1 — 2026-11-18
 
 - Wardrobe filter: **Show → Hide on sale and sold** lists only the pieces you're keeping

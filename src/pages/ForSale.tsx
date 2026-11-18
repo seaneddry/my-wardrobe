@@ -1,12 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { NavBar } from '../components/NavBar';
 import { Photo } from '../components/Photo';
+import { SaleFilterSheet } from '../components/SaleFilterSheet';
 import { SaleSheet } from '../components/SaleSheet';
 import { Sheet } from '../components/Sheet';
 import { itemTitle, type Item } from '../data/types';
 import { SALE_LABELS, formatMoney, saleTotal, shortDate, type SaleStatus } from '../lib/sale';
+import {
+  DEFAULT_SALE_FILTERS,
+  applySaleFilters,
+  loadSaleFilters,
+  saleNarrowed,
+  saleSheetCount,
+  saveSaleFilters,
+  type SaleFilters,
+} from '../lib/saleFilters';
 import { useData } from '../state/data';
 
 const TAB_KEY = 'sale-tab';
@@ -19,21 +29,16 @@ function readTab(): SaleStatus {
   }
 }
 
-/** Newest first: by sold date on the Sold tab, by listed date on the On sale tab. */
-function byDate(tab: SaleStatus) {
-  return (a: Item, b: Item) => {
-    const da = (tab === 'sold' ? a.sold_at : a.listed_at) ?? a.updated_at;
-    const db = (tab === 'sold' ? b.sold_at : b.listed_at) ?? b.updated_at;
-    return db.localeCompare(da);
-  };
-}
-
 export function ForSale() {
-  const { items, loading } = useData();
+  const { items, loading, lookups } = useData();
   const [tab, setTabState] = useState<SaleStatus>(readTab);
   const [pickOpen, setPickOpen] = useState(false);
   const [listing, setListing] = useState<Item | null>(null);
   const [q, setQ] = useState('');
+  const [filters, setFilters] = useState<SaleFilters>(loadSaleFilters);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  useEffect(() => saveSaleFilters(filters), [filters]);
 
   const setTab = (t: SaleStatus) => {
     setTabState(t);
@@ -44,10 +49,25 @@ export function ForSale() {
     }
   };
 
-  const onSale = useMemo(() => items.filter((i) => i.status === 'for_sale').sort(byDate('for_sale')), [items]);
-  const sold = useMemo(() => items.filter((i) => i.status === 'sold').sort(byDate('sold')), [items]);
+  const salePieces = useMemo(() => items.filter((i) => i.status === 'for_sale' || i.status === 'sold'), [items]);
+  const allOnSale = salePieces.filter((i) => i.status === 'for_sale').length;
+  const allSold = salePieces.length - allOnSale;
+  // Search, sort and filter apply to both lists, and the totals add up only what matches.
+  const matches = useMemo(() => applySaleFilters(salePieces, filters), [salePieces, filters]);
+  const onSale = useMemo(() => matches.filter((i) => i.status === 'for_sale'), [matches]);
+  const sold = useMemo(() => matches.filter((i) => i.status === 'sold'), [matches]);
   const shown = tab === 'sold' ? sold : onSale;
   const totals = useMemo(() => ({ for_sale: saleTotal(onSale), sold: saleTotal(sold) }), [onSale, sold]);
+  const narrowed = saleNarrowed(filters);
+  const sheetCount = saleSheetCount(filters);
+
+  // Category pills: only categories used by sale pieces, in the order of the category list.
+  const usedCategories = useMemo(() => {
+    const used = new Set(salePieces.map((i) => i.category));
+    return lookups('category')
+      .map((l) => l.value)
+      .filter((c) => used.has(c));
+  }, [salePieces, lookups]);
 
   const wardrobe = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -68,18 +88,66 @@ export function ForSale() {
         title="For Sale"
         subtitle={subtitle}
         right={
-          <Link to="/sale/add" viewTransition className="nav-pill" aria-label="Add a piece to sell">
-            <Icon name="plus" size={16} weight={2.6} />
-            Add
-          </Link>
+          <>
+            <button
+              type="button"
+              className="nav-icon-button"
+              onClick={() => setFilterOpen(true)}
+              aria-label={sheetCount ? `Sort and filter, ${sheetCount} active` : 'Sort and filter'}
+            >
+              <Icon name="filter" size={24} weight={2} />
+              {sheetCount > 0 && <span className="badge-dot">{sheetCount}</span>}
+            </button>
+            <Link to="/sale/add" viewTransition className="nav-pill" aria-label="Add a piece to sell">
+              <Icon name="plus" size={16} weight={2.6} />
+              Add
+            </Link>
+          </>
         }
-      />
+      >
+        {salePieces.length > 0 && (
+          <div className="search-bar">
+            <label className="search-field">
+              <Icon name="search" size={18} weight={2} />
+              <input
+                type="search"
+                enterKeyHint="search"
+                placeholder="Search name, brand or type"
+                aria-label="Search pieces for sale"
+                value={filters.q}
+                onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+              />
+              {filters.q && (
+                <button type="button" className="search-clear" aria-label="Clear search" onClick={() => setFilters({ ...filters, q: '' })}>
+                  <Icon name="close" size={12} weight={3} />
+                </button>
+              )}
+            </label>
+          </div>
+        )}
+        {usedCategories.length > 1 && (
+          <div className="pill-row" role="group" aria-label="Category">
+            {[null, ...usedCategories].map((c) => (
+              <button
+                key={c ?? 'all'}
+                type="button"
+                className={`pill${filters.category === c ? ' pill-on' : ''}`}
+                aria-pressed={filters.category === c}
+                onClick={() => setFilters({ ...filters, category: c })}
+              >
+                {c ?? 'All'}
+              </button>
+            ))}
+          </div>
+        )}
+      </NavBar>
 
       <main className="page stack">
         <div className="sale-totals" role="group" aria-label="Show">
           {(Object.keys(SALE_LABELS) as SaleStatus[]).map((s) => {
             const { total, unpriced } = totals[s];
             const count = s === 'sold' ? sold.length : onSale.length;
+            const all = s === 'sold' ? allSold : allOnSale;
             return (
               <button
                 key={s}
@@ -91,7 +159,7 @@ export function ForSale() {
                 <span className="sale-total-label">{s === 'sold' ? 'Sold for' : 'On sale'}</span>
                 <span className="sale-total-value">{formatMoney(total)}</span>
                 <span className="sale-total-sub">
-                  {count} {count === 1 ? 'piece' : 'pieces'}
+                  {narrowed ? `${count} of ${all}` : `${count} ${count === 1 ? 'piece' : 'pieces'}`}
                   {unpriced > 0 && ` · ${unpriced} no price`}
                 </span>
               </button>
@@ -99,7 +167,18 @@ export function ForSale() {
           })}
         </div>
 
-        {shown.length === 0 ? (
+        {shown.length === 0 && narrowed && (tab === 'sold' ? allSold : allOnSale) > 0 ? (
+          <div className="empty">
+            <div className="empty-icon">
+              <Icon name="search" size={28} weight={1.8} />
+            </div>
+            <h2>No matches</h2>
+            <p>Try a different search, or clear the filters.</p>
+            <button type="button" className="button button-secondary" onClick={() => setFilters({ ...DEFAULT_SALE_FILTERS, sort: filters.sort })}>
+              Clear search and filters
+            </button>
+          </div>
+        ) : shown.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
               <Icon name="tag" size={28} weight={1.8} />
@@ -184,6 +263,15 @@ export function ForSale() {
           </div>
         )}
       </Sheet>
+
+      <SaleFilterSheet
+        open={filterOpen}
+        filters={filters}
+        onChange={setFilters}
+        onClose={() => setFilterOpen(false)}
+        resultCount={shown.length}
+        pieces={salePieces}
+      />
 
       <SaleSheet
         item={listing}
