@@ -6,7 +6,7 @@ import { Photo } from '../components/Photo';
 import { SaleSheet } from '../components/SaleSheet';
 import { Sheet } from '../components/Sheet';
 import { itemTitle, type Item } from '../data/types';
-import { SALE_LABELS, formatMoney, shortDate, type SaleStatus } from '../lib/sale';
+import { SALE_LABELS, formatMoney, saleTotal, shortDate, type SaleStatus } from '../lib/sale';
 import { useData } from '../state/data';
 
 const TAB_KEY = 'sale-tab';
@@ -47,6 +47,7 @@ export function ForSale() {
   const onSale = useMemo(() => items.filter((i) => i.status === 'for_sale').sort(byDate('for_sale')), [items]);
   const sold = useMemo(() => items.filter((i) => i.status === 'sold').sort(byDate('sold')), [items]);
   const shown = tab === 'sold' ? sold : onSale;
+  const totals = useMemo(() => ({ for_sale: saleTotal(onSale), sold: saleTotal(sold) }), [onSale, sold]);
 
   const wardrobe = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -58,8 +59,7 @@ export function ForSale() {
       });
   }, [items, q]);
 
-  const subtitle =
-    loading && items.length === 0 ? 'Loading…' : `${onSale.length} on sale · ${sold.length} sold`;
+  const subtitle = loading && items.length === 0 ? 'Loading…' : undefined;
 
   return (
     <div className="screen">
@@ -73,20 +73,32 @@ export function ForSale() {
             Add
           </Link>
         }
-      >
-        <div className="sale-tabs">
-          <div className="segmented" role="group" aria-label="Show">
-            {(Object.keys(SALE_LABELS) as SaleStatus[]).map((s) => (
-              <button key={s} type="button" aria-pressed={tab === s} onClick={() => setTab(s)}>
-                {SALE_LABELS[s]}
-                <span className="segmented-count">{s === 'sold' ? sold.length : onSale.length}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </NavBar>
+      />
 
       <main className="page stack">
+        <div className="sale-totals" role="group" aria-label="Show">
+          {(Object.keys(SALE_LABELS) as SaleStatus[]).map((s) => {
+            const { total, unpriced } = totals[s];
+            const count = s === 'sold' ? sold.length : onSale.length;
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`sale-total${tab === s ? ' is-on' : ''}`}
+                aria-pressed={tab === s}
+                onClick={() => setTab(s)}
+              >
+                <span className="sale-total-label">{s === 'sold' ? 'Sold for' : 'On sale'}</span>
+                <span className="sale-total-value">{formatMoney(total)}</span>
+                <span className="sale-total-sub">
+                  {count} {count === 1 ? 'piece' : 'pieces'}
+                  {unpriced > 0 && ` · ${unpriced} no price`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {shown.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
@@ -134,7 +146,13 @@ export function ForSale() {
       <Sheet open={pickOpen} onClose={() => setPickOpen(false)} title="Choose a piece" full>
         <label className="search-field" style={{ flex: 'none', marginBottom: 12 }}>
           <Icon name="search" size={18} weight={2} />
-          <input type="search" placeholder="Search your wardrobe" aria-label="Search your wardrobe" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            type="search"
+            placeholder="Search your wardrobe"
+            aria-label="Search your wardrobe"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </label>
         {wardrobe.length === 0 ? (
           <p className="sale-hint">{q ? 'No matches.' : 'Everything in your wardrobe is already on sale or sold.'}</p>
@@ -156,7 +174,9 @@ export function ForSale() {
                 </span>
                 <span className="row-label">
                   <span className="piece-title">{itemTitle(item)}</span>
-                  <span className="piece-sub">{[item.brand, item.size && `Size ${item.size}`].filter(Boolean).join(' · ') || item.category}</span>
+                  <span className="piece-sub">
+                    {[item.brand, item.size && `Size ${item.size}`].filter(Boolean).join(' · ') || item.category}
+                  </span>
                 </span>
                 <Icon name="chevron" size={16} weight={2.4} />
               </button>
@@ -181,9 +201,7 @@ export function ForSale() {
 function SaleRow({ item }: { item: Item }) {
   const sold = item.status === 'sold';
   const date = sold ? item.sold_at : item.listed_at;
-  const sub = [item.size && `Size ${item.size}`, date && `${sold ? 'Sold' : 'Listed'} ${shortDate(date)}`]
-    .filter(Boolean)
-    .join(' · ');
+  const sub = [item.size && `Size ${item.size}`, date && `${sold ? 'Sold' : 'Listed'} ${shortDate(date)}`].filter(Boolean).join(' · ');
   return (
     <Link to={`/item/${item.id}`} viewTransition className="row sale-row">
       <span className="sale-thumb">
@@ -195,7 +213,9 @@ function SaleRow({ item }: { item: Item }) {
         <span className="piece-title">{itemTitle(item)}</span>
         {sub && <span className="piece-sub">{sub}</span>}
       </span>
-      <span className={`sale-price${item.sale_price == null ? ' is-empty' : ''}`}>{item.sale_price == null ? 'No price' : formatMoney(item.sale_price)}</span>
+      <span className={`sale-price${item.sale_price == null ? ' is-empty' : ''}`}>
+        {item.sale_price == null ? 'No price' : formatMoney(item.sale_price)}
+      </span>
     </Link>
   );
 }

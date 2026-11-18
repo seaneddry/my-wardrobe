@@ -20,6 +20,17 @@ export function isOwned(item: Pick<Item, 'status'>): boolean {
   return item.status === 'active' || item.status === 'for_sale';
 }
 
+/** Total asking price of the pieces, and how many have no price yet. */
+export function saleTotal(items: Pick<Item, 'sale_price'>[]): { total: number; unpriced: number } {
+  let total = 0;
+  let unpriced = 0;
+  for (const i of items) {
+    if (i.sale_price == null) unpriced += 1;
+    else total += i.sale_price;
+  }
+  return { total: Math.round(total * 100) / 100, unpriced };
+}
+
 /** Today as YYYY-MM-DD in the phone's own time zone. */
 export function today(): string {
   const d = new Date();

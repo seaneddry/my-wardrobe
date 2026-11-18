@@ -2,6 +2,12 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.6.1 — 2026-11-18
+
+- Wardrobe filter: **Show → Hide on sale and sold** lists only the pieces you're keeping
+- For Sale: two total tiles, **On sale** (total asking price) and **Sold for** (total of sold pieces), each with a piece count and how many have no price yet. Tap a tile to switch between the lists (replaces the On sale / Sold switch)
+- No database change
+
 ## 1.6.0 — 2026-10-31
 
 Sell pieces you no longer want, and a new Liquid Glass look.

@@ -8,8 +8,12 @@ export interface Filters {
   colours: string[];
   sizes: string[];
   occasions: string[];
-  /** active: everything you have or sold (not archived). sale: on sale or sold. */
-  status: 'active' | 'sale' | 'archived' | 'all';
+  /**
+   * active: everything except archived (includes on sale and sold).
+   * keep: only pieces you're keeping (no on sale, sold or archived).
+   * sale: on sale or sold. archived: archived only. all: everything.
+   */
+  status: 'active' | 'keep' | 'sale' | 'archived' | 'all';
   sort: SortKey;
 }
 
@@ -81,6 +85,7 @@ export function applyFilters(items: Item[], f: Filters): Item[] {
   const terms = f.q.toLowerCase().split(/\s+/).filter(Boolean);
   const result = items.filter((item) => {
     if (f.status === 'active' && item.status === 'archived') return false;
+    if (f.status === 'keep' && item.status !== 'active') return false;
     if (f.status === 'sale' && item.status !== 'for_sale' && item.status !== 'sold') return false;
     if (f.status === 'archived' && item.status !== 'archived') return false;
     if (f.category && item.category !== f.category) return false;

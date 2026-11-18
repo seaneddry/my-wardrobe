@@ -97,6 +97,7 @@ body {
 .empty-icon,
 .quick-link,
 .sale-card,
+.sale-total,
 .sale-price-field,
 .outfit-card-photo,
 .card-photo,
@@ -110,7 +111,8 @@ body {
 }
 .group-body,
 .quick-link,
-.sale-card {
+.sale-card,
+.sale-total {
   border-radius: 22px;
 }
 .fact,
