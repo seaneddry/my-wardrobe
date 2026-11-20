@@ -2,6 +2,14 @@
 
 All notable changes to My Wardrobe. Versions follow `MAJOR.MINOR.PATCH` (see `docs/MAINTAINING.md`).
 
+## 1.7.0 — 2026-11-20
+
+- **Previous / next piece:** on a piece's page, the up and down arrows next to **Edit** open the previous or next piece in the list you came from, without going back to it
+- Works from the Wardrobe grid (with your current search, category, filters and sort), from For Sale (On sale or Sold, as filtered) and from an outfit's pieces
+- **Back** still goes straight to the list, which scrolls to the last piece you looked at
+- After **Edit → Save**, the arrows are still there, and Back no longer needs two taps
+- No database change
+
 ## 1.6.2 — 2026-11-19
 
 - For Sale: **search** by name, brand or type

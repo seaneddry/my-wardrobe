@@ -3334,3 +3334,45 @@ select.input:disabled {
   font-size: 12px;
   opacity: 0.65;
 }
+
+/* ------------------------------------------------- previous / next piece */
+/* Up / down arrows on a piece's page, for stepping through the list it was opened from. */
+.item-stepper {
+  display: flex;
+  align-items: center;
+}
+.item-stepper .nav-icon-button:disabled {
+  opacity: 0.3;
+}
+.item-stepper .nav-icon-button:not(:disabled):active {
+  opacity: 0.5;
+}
+/* Over the photo: one frosted capsule holding both arrows. */
+.navbar-overlay:not(.is-solid) .item-stepper {
+  height: 36px;
+  margin: 0 4px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.14);
+  overflow: hidden;
+}
+.navbar-overlay:not(.is-solid) .item-stepper .nav-icon-button {
+  width: 38px;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  .navbar-overlay:not(.is-solid) .item-stepper {
+    background: rgb(28 28 30 / 0.7);
+  }
+}
+/* No room for the small title next to the arrows (like Mail); the big title is on the page. */
+.navbar:has(.item-stepper) .navbar-title {
+  visibility: hidden;
+}

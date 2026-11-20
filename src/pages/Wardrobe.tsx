@@ -4,6 +4,7 @@ import { FilterSheet } from '../components/FilterSheet';
 import { Icon } from '../components/Icon';
 import { ItemCard } from '../components/ItemCard';
 import { NavBar } from '../components/NavBar';
+import { scrollToPiece, takeStep } from '../lib/browse';
 import { DEFAULT_FILTERS, applyFilters, loadFilters, saveFilters, sheetFilterCount, type Filters } from '../lib/filters';
 import { useData } from '../state/data';
 
@@ -16,15 +17,20 @@ export function Wardrobe() {
 
   useEffect(() => saveFilters(filters), [filters]);
 
-  // Return to the same scroll position after viewing a piece.
+  // Return to the same scroll position after viewing a piece,
+  // or to the last piece you stepped to with previous / next.
   useEffect(() => {
+    const stepped = takeStep();
     let saved = 0;
     try {
       saved = Number(sessionStorage.getItem(SCROLL_KEY) || 0);
     } catch {
       /* ignore */
     }
-    if (saved) requestAnimationFrame(() => window.scrollTo(0, saved));
+    requestAnimationFrame(() => {
+      if (stepped && scrollToPiece(stepped)) return;
+      if (saved) window.scrollTo(0, saved);
+    });
     return () => {
       try {
         sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
@@ -35,6 +41,7 @@ export function Wardrobe() {
   }, []);
 
   const visible = useMemo(() => applyFilters(items, filters), [items, filters]);
+  const visibleIds = useMemo(() => visible.map((i) => i.id), [visible]);
   const inWardrobe = items.filter((i) => i.status === 'active' || i.status === 'for_sale').length;
   const sheetCount = sheetFilterCount(filters);
   const narrowed = filters.q || filters.category || sheetCount > 0;
@@ -124,7 +131,7 @@ export function Wardrobe() {
         ) : (
           <div className="grid">
             {visible.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard key={item.id} item={item} list={visibleIds} />
             ))}
           </div>
         )}

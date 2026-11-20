@@ -74,7 +74,7 @@ src/
     manage/                 The Manage section (lists and custom fields)
     outfits/                Outfits list, outfit page, and the builder canvas
   components/               Reusable pieces (nav bar, tab bar, sheets, carousel, photo strip, online search)
-  lib/                      Small helpers (filters, outfits and shuffle, selling, formatting, image resizing)
+  lib/                      Small helpers (filters, outfits and shuffle, selling, previous/next browsing, formatting, image resizing)
   styles.css                Base design system and components
   glass.css                 Liquid Glass theme (same as Garage), loaded last; re-skins styles.css
 supabase/migrations/        Database scripts, run in order

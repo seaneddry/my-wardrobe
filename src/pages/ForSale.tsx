@@ -7,6 +7,7 @@ import { SaleFilterSheet } from '../components/SaleFilterSheet';
 import { SaleSheet } from '../components/SaleSheet';
 import { Sheet } from '../components/Sheet';
 import { itemTitle, type Item } from '../data/types';
+import { browseState, scrollToPiece, takeStep } from '../lib/browse';
 import { SALE_LABELS, formatMoney, saleTotal, shortDate, type SaleStatus } from '../lib/sale';
 import {
   DEFAULT_SALE_FILTERS,
@@ -40,6 +41,12 @@ export function ForSale() {
 
   useEffect(() => saveSaleFilters(filters), [filters]);
 
+  // Coming back after stepping through pieces: show the last one you looked at.
+  useEffect(() => {
+    const stepped = takeStep();
+    if (stepped) requestAnimationFrame(() => scrollToPiece(stepped));
+  }, []);
+
   const setTab = (t: SaleStatus) => {
     setTabState(t);
     try {
@@ -57,6 +64,7 @@ export function ForSale() {
   const onSale = useMemo(() => matches.filter((i) => i.status === 'for_sale'), [matches]);
   const sold = useMemo(() => matches.filter((i) => i.status === 'sold'), [matches]);
   const shown = tab === 'sold' ? sold : onSale;
+  const shownIds = useMemo(() => shown.map((i) => i.id), [shown]);
   const totals = useMemo(() => ({ for_sale: saleTotal(onSale), sold: saleTotal(sold) }), [onSale, sold]);
   const narrowed = saleNarrowed(filters);
   const sheetCount = saleSheetCount(filters);
@@ -202,7 +210,7 @@ export function ForSale() {
           <section className="group">
             <div className="group-body">
               {shown.map((item) => (
-                <SaleRow key={item.id} item={item} />
+                <SaleRow key={item.id} item={item} list={shownIds} />
               ))}
             </div>
           </section>
@@ -286,12 +294,12 @@ export function ForSale() {
   );
 }
 
-function SaleRow({ item }: { item: Item }) {
+function SaleRow({ item, list }: { item: Item; list: string[] }) {
   const sold = item.status === 'sold';
   const date = sold ? item.sold_at : item.listed_at;
   const sub = [item.size && `Size ${item.size}`, date && `${sold ? 'Sold' : 'Listed'} ${shortDate(date)}`].filter(Boolean).join(' · ');
   return (
-    <Link to={`/item/${item.id}`} viewTransition className="row sale-row">
+    <Link to={`/item/${item.id}`} state={browseState(list)} data-item-id={item.id} viewTransition className="row sale-row">
       <span className="sale-thumb">
         <Photo path={item.photos[0]?.thumb ?? item.thumb_path} alt="" />
         {sold && <span className="sale-thumb-badge">Sold</span>}

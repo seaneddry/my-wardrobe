@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Carousel } from '../components/Carousel';
 import { formatAttribute } from '../components/CustomField';
@@ -9,12 +9,18 @@ import { SaleSheet } from '../components/SaleSheet';
 import { Swatch } from '../components/Swatch';
 import { useToast } from '../components/Toast';
 import { itemTitle } from '../data/types';
+import { readBrowse, rememberStep } from '../lib/browse';
 import { errorMessage, formatDate, formatPrice } from '../lib/format';
 import { SALE_LABELS, formatMoney, isSaleStatus, today } from '../lib/sale';
 import { useData } from '../state/data';
 
 export function ItemDetail() {
   const { id } = useParams();
+  // Keyed so photos, sheets and messages start fresh when stepping to another piece.
+  return <ItemDetailView key={id} id={id} />;
+}
+
+function ItemDetailView({ id }: { id?: string }) {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -23,6 +29,24 @@ export function ItemDetail() {
   const [error, setError] = useState<string | null>(null);
   const [saleOpen, setSaleOpen] = useState(false);
   const item = items.find((i) => i.id === id);
+
+  // The list this piece was opened from (skipping deleted pieces), for previous / next.
+  const browse = useMemo(() => {
+    const ids = readBrowse(location.state);
+    if (!ids) return null;
+    const existing = new Set(items.map((i) => i.id));
+    return ids.filter((i) => existing.has(i));
+  }, [location.state, items]);
+  const position = browse && id ? browse.indexOf(id) : -1;
+  const prevId = browse && position > 0 ? browse[position - 1] : null;
+  const nextId = browse && position >= 0 && position < browse.length - 1 ? browse[position + 1] : null;
+
+  // Replaces this page so Back still goes straight to the list.
+  const step = (to: string | null) => {
+    if (!to) return;
+    rememberStep(to);
+    navigate(`/item/${to}`, { replace: true, state: location.state, viewTransition: true });
+  };
 
   // Opened directly (no history in this app): go to the wardrobe instead.
   const goBack = () => (location.key === 'default' ? navigate('/', { viewTransition: true }) : navigate(-1));
@@ -105,9 +129,21 @@ export function ItemDetail() {
         title={title}
         left={back}
         right={
-          <Link to={`/item/${current.id}/edit`} className="nav-button nav-button-strong">
-            Edit
-          </Link>
+          <>
+            {browse && position >= 0 && browse.length > 1 && (
+              <div className="item-stepper" role="group" aria-label={`Piece ${position + 1} of ${browse.length}`}>
+                <button type="button" className="nav-icon-button" onClick={() => step(prevId)} disabled={!prevId} aria-label="Previous piece">
+                  <Icon name="up" size={20} weight={2.4} />
+                </button>
+                <button type="button" className="nav-icon-button" onClick={() => step(nextId)} disabled={!nextId} aria-label="Next piece">
+                  <Icon name="down" size={20} weight={2.4} />
+                </button>
+              </div>
+            )}
+            <Link to={`/item/${current.id}/edit`} state={location.state} className="nav-button nav-button-strong">
+              Edit
+            </Link>
+          </>
         }
       />
       <Carousel photos={current.photos} alt={title} heroName="item-hero" />

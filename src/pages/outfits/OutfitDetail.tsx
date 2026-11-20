@@ -7,6 +7,7 @@ import { OutfitCollage } from '../../components/OutfitCollage';
 import { Photo } from '../../components/Photo';
 import { useToast } from '../../components/Toast';
 import { itemTitle } from '../../data/types';
+import { browseState } from '../../lib/browse';
 import { errorMessage } from '../../lib/format';
 import { outfitItems, SLOT_LABELS, slotForCategory } from '../../lib/outfits';
 import { useData } from '../../state/data';
@@ -112,7 +113,7 @@ export function OutfitDetail() {
 
         <Group header={`${pieces.length} ${pieces.length === 1 ? 'piece' : 'pieces'}`} footer={missing > 0 ? `${missing} piece${missing === 1 ? ' was' : 's were'} deleted from your wardrobe.` : undefined}>
           {pieces.map((item) => (
-            <Link key={item.id} to={`/item/${item.id}`} viewTransition className="row piece-row">
+            <Link key={item.id} to={`/item/${item.id}`} state={browseState(pieces.map((p) => p.id))} viewTransition className="row piece-row">
               <span className="piece-thumb">
                 <Photo path={item.photos[0]?.thumb ?? item.thumb_path} alt="" />
               </span>

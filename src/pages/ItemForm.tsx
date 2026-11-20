@@ -58,6 +58,7 @@ export function ItemForm() {
 
 function ItemFormBody({ existing, forSale = false }: { existing?: Item; forSale?: boolean }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { items, fields: customFields, lookups, saveItem } = useData();
 
@@ -202,7 +203,10 @@ function ItemFormBody({ existing, forSale = false }: { existing?: Item; forSale?
         photos,
       });
       toast(existing ? 'Changes saved' : selling ? 'Added to For Sale' : 'Piece added');
-      navigate(`/item/${saved.id}`, { replace: true, viewTransition: true });
+      // Editing: go back to the piece's page, which keeps the list for previous / next and
+      // avoids a second copy of that page in history. Opened directly: replace the form instead.
+      if (existing && location.key !== 'default') navigate(-1);
+      else navigate(`/item/${saved.id}`, { replace: true, state: location.state, viewTransition: true });
     } catch (err) {
       fail(errorMessage(err));
       setBusy(false);

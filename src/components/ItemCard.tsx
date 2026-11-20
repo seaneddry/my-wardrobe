@@ -1,12 +1,14 @@
 import { Link, useViewTransitionState } from 'react-router-dom';
 import { itemTitle, type Item } from '../data/types';
+import { browseState } from '../lib/browse';
 import { useData } from '../state/data';
 import { SALE_LABELS, formatMoney, isSaleStatus } from '../lib/sale';
 import { Icon } from './Icon';
 import { Photo } from './Photo';
 import { Swatch } from './Swatch';
 
-export function ItemCard({ item }: { item: Item }) {
+/** `list`: the ids shown on screen, in order, so the piece page can step to the previous / next one. */
+export function ItemCard({ item, list }: { item: Item; list?: string[] }) {
   const { colourHex } = useData();
   const to = `/item/${item.id}`;
   // Names this card's photo during the transition so it morphs into the detail page.
@@ -23,7 +25,13 @@ export function ItemCard({ item }: { item: Item }) {
   const cover = item.photos[0]?.thumb ?? item.thumb_path;
 
   return (
-    <Link to={to} viewTransition className={`card pressable${item.status === 'archived' ? ' card-archived' : ''}${item.status === 'sold' ? ' card-sold' : ''}`}>
+    <Link
+      to={to}
+      state={list ? browseState(list) : undefined}
+      data-item-id={item.id}
+      viewTransition
+      className={`card pressable${item.status === 'archived' ? ' card-archived' : ''}${item.status === 'sold' ? ' card-sold' : ''}`}
+    >
       <div className="card-photo" style={transitioning ? { viewTransitionName: 'item-hero' } : undefined}>
         <Photo path={cover} alt={title} />
         {isSaleStatus(item.status) && <span className={`status-badge card-status${item.status === 'sold' ? ' is-sold' : ''}`}>{SALE_LABELS[item.status]}</span>}
